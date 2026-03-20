@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-expo-app@latest . --template tabs -- --yes)",
+      "Bash(npx --yes create-expo-app@latest . --template tabs)",
+      "Bash(npx --yes create-expo-app@latest TestGenApp --template tabs)",
+      "Bash(shopt -s dotglob)",
+      "Bash(mv TestGenApp/* .)",
+      "Bash(mv TestGenApp/.* .)",
+      "Bash(node -e \"const c = require\\(''''@clerk/expo''''\\); console.log\\(Object.keys\\(c\\).filter\\(k => k.includes\\(''''Clerk''''\\) || k.includes\\(''''clerk''''\\)\\)\\)\")",
+      "Bash(grep -r ClerkLoaded C:UsersUserDocumentsTestGenMobilenode_modules@clerkexposrc --include=*.ts --include=*.tsx -l)",
+      "Bash(grep -r ClerkLoaded C:UsersUserDocumentsTestGenMobilenode_modules@clerkexpo --include=*.js -l)"
+    ]
+  }
+}
