@@ -3,14 +3,25 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MotiView } from 'moti';
 import { subjects, Subject } from '@/lib/subjects';
 import { Input } from '@/components/ui/Input';
-import { theme } from '@/lib/theme';
+import { SectionLabel } from '@/components/ui/Label';
+import { Card } from '@/components/ui/Card';
+import { useTheme } from '@/contexts/ThemeContext';
+import {
+  FONTS,
+  FONT_SIZES,
+  RADIUS,
+  SPACING,
+  SHADOWS,
+} from '@/constants/theme';
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   school: 'school',
@@ -30,19 +41,21 @@ const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function GenerateScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredSubjects = subjects.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const standardizedTests = filteredSubjects.filter(
-    (s) => s.id === 'sat' || s.id === 'act'
+    (s) => s.id === 'sat' || s.id === 'act',
   );
   const apSubjects = filteredSubjects.filter((s) => s.id.startsWith('ap-'));
   const coreSubjects = filteredSubjects.filter(
-    (s) => !s.id.startsWith('ap-') && s.id !== 'sat' && s.id !== 'act'
+    (s) => !s.id.startsWith('ap-') && s.id !== 'sat' && s.id !== 'act',
   );
 
   const handleSelectSubject = (subject: Subject) => {
@@ -53,81 +66,107 @@ export default function GenerateScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 20 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + SPACING.lg,
+          paddingHorizontal: SPACING.screenH,
+          paddingBottom: 80 + insets.bottom + SPACING.xl,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: theme.text }}>
-            Build Your Practice Test
-          </Text>
-          <Text style={{ color: theme.textSecondary, fontSize: 14, marginTop: 4 }}>
+        {/* Title */}
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300 }}
+        >
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Build Your Practice Test</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             Customize your session — then start when you're ready.
           </Text>
-        </View>
 
-        {/* Upload Notes */}
-        <TouchableOpacity
-          onPress={() => router.push('/(app)/upload')}
-          activeOpacity={0.7}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: theme.card,
-            borderRadius: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            gap: 8,
-            borderWidth: 1,
-            borderColor: theme.cardBorder,
-            alignSelf: 'flex-start',
-          }}
-        >
-          <Ionicons name="cloud-upload-outline" size={18} color={theme.text} />
-          <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>
-            Upload Notes Instead
-          </Text>
-        </TouchableOpacity>
+          {/* Upload button */}
+          <Pressable
+            onPress={() => router.push('/(app)/upload')}
+            style={({ pressed }) => [
+              styles.uploadButton,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Ionicons
+              name="cloud-upload-outline"
+              size={18}
+              color={colors.textPrimary}
+            />
+            <Text style={[styles.uploadButtonText, { color: colors.textPrimary }]}>Upload Notes Instead</Text>
+          </Pressable>
+        </MotiView>
 
         {/* Search */}
-        <Input
-          placeholder="e.g., AP Physics I, SAT Math..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          icon={<Ionicons name="book" size={18} color={theme.textMuted} />}
-        />
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300, delay: 100 }}
+        >
+          <View style={{ marginBottom: SPACING.lg }}>
+            <Input
+              placeholder="e.g., AP Physics I, SAT Math..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              icon={
+                <Ionicons name="book" size={18} color={colors.textMuted} />
+              }
+            />
+          </View>
+        </MotiView>
 
-        {/* Standardized Tests */}
-        {standardizedTests.length > 0 && (
-          <SubjectSection
-            title="Standardized Tests"
-            subjects={standardizedTests}
-            onSelect={handleSelectSubject}
-          />
-        )}
-
-        {/* AP Subjects */}
-        {apSubjects.length > 0 && (
-          <SubjectSection
-            title="AP Subjects"
-            subjects={apSubjects}
-            onSelect={handleSelectSubject}
-          />
-        )}
-
-        {/* Core Subjects */}
-        {coreSubjects.length > 0 && (
-          <SubjectSection
-            title="Core Subjects"
-            subjects={coreSubjects}
-            onSelect={handleSelectSubject}
-          />
-        )}
+        {/* Subject sections */}
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300, delay: 200 }}
+        >
+          {standardizedTests.length > 0 && (
+            <View style={{ marginBottom: SPACING.lg }}>
+              <SubjectSection
+                title="Standardized Tests"
+                subjects={standardizedTests}
+                onSelect={handleSelectSubject}
+              />
+            </View>
+          )}
+          {apSubjects.length > 0 && (
+            <View style={{ marginBottom: SPACING.lg }}>
+              <SubjectSection
+                title="AP Subjects"
+                subjects={apSubjects}
+                onSelect={handleSelectSubject}
+              />
+            </View>
+          )}
+          {coreSubjects.length > 0 && (
+            <View style={{ marginBottom: SPACING.lg }}>
+              <SubjectSection
+                title="Core Subjects"
+                subjects={coreSubjects}
+                onSelect={handleSelectSubject}
+              />
+            </View>
+          )}
+        </MotiView>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Subject Section                                                    */
+/* ------------------------------------------------------------------ */
 
 function SubjectSection({
   title,
@@ -138,37 +177,29 @@ function SubjectSection({
   subjects: Subject[];
   onSelect: (s: Subject) => void;
 }) {
+  const { colors } = useTheme();
   return (
-    <View style={{ gap: 10 }}>
-      <Text style={{ fontSize: 16, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-        {title}
-      </Text>
-      <View style={{ gap: 8 }}>
+    <View>
+      <SectionLabel>{title.toUpperCase()}</SectionLabel>
+      <View style={{ gap: SPACING.sm }}>
         {subjectList.map((subject) => (
-          <TouchableOpacity
+          <Pressable
             key={subject.id}
             onPress={() => onSelect(subject)}
-            activeOpacity={0.7}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: theme.card,
-              borderRadius: 14,
-              padding: 14,
-              gap: 12,
-              borderWidth: 1,
-              borderColor: theme.cardBorder,
-            }}
+            style={({ pressed }) => [
+              styles.subjectCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
           >
             <View
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 12,
-                backgroundColor: subject.color + '20',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              style={[
+                styles.subjectIconCircle,
+                { backgroundColor: subject.color + '20' },
+              ]}
             >
               <Ionicons
                 name={iconMap[subject.icon] ?? 'book'}
@@ -177,17 +208,83 @@ function SubjectSection({
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.text }}>
-                {subject.name}
-              </Text>
-              <Text style={{ fontSize: 13, color: theme.textSecondary }}>
+              <Text style={[styles.subjectName, { color: colors.textPrimary }]}>{subject.name}</Text>
+              <Text style={[styles.subjectTopicCount, { color: colors.textMuted }]}>
                 {subject.topics.length} topics
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-          </TouchableOpacity>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textMuted}
+            />
+          </Pressable>
         ))}
       </View>
     </View>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Styles                                                             */
+/* ------------------------------------------------------------------ */
+
+const styles = StyleSheet.create({
+  title: {
+    fontSize: FONT_SIZES.xxl,
+    fontFamily: FONTS.displaySemiBold,
+    lineHeight: FONT_SIZES.xxl * 1.2,
+  },
+  subtitle: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: FONT_SIZES.sm,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+    lineHeight: FONT_SIZES.sm * 1.6,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+    gap: SPACING.sm,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.lg,
+    minHeight: 44,
+    ...SHADOWS.sm,
+  },
+  uploadButtonText: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.sansMedium,
+    lineHeight: FONT_SIZES.sm * 1.5,
+  },
+  subjectCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    minHeight: 44,
+    ...SHADOWS.sm,
+  },
+  subjectIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subjectName: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONTS.sansMedium,
+    lineHeight: FONT_SIZES.base * 1.5,
+  },
+  subjectTopicCount: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.sansRegular,
+    lineHeight: FONT_SIZES.sm * 1.6,
+  },
+});

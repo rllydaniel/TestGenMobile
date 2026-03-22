@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
-import { theme } from '@/lib/theme';
+import { FONTS, FONT_SIZES, SPACING } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface EmptyStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -19,39 +20,43 @@ export function EmptyState({
   actionTitle,
   onAction,
 }: EmptyStateProps) {
+  const { colors } = useTheme();
+
   return (
     <View
       style={{
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 32,
-        gap: 16,
+        padding: SPACING.xl,
+        gap: SPACING.md,
       }}
     >
-      <Ionicons name={icon} size={64} color={theme.textMuted} />
+      <Ionicons name={icon} size={64} color={colors.textFaint} />
       <Text
         style={{
-          fontSize: 20,
-          fontWeight: '700',
-          color: theme.text,
+          fontSize: FONT_SIZES.lg,
+          fontFamily: FONTS.displaySemiBold,
+          color: colors.textPrimary,
           textAlign: 'center',
+          lineHeight: FONT_SIZES.lg * 1.2,
         }}
       >
         {title}
       </Text>
       <Text
         style={{
-          fontSize: 15,
-          color: theme.textSecondary,
+          fontSize: FONT_SIZES.base,
+          fontFamily: FONTS.sansRegular,
+          color: colors.textMuted,
           textAlign: 'center',
-          lineHeight: 22,
+          lineHeight: FONT_SIZES.base * 1.6,
         }}
       >
         {description}
       </Text>
       {actionTitle && onAction && (
-        <Button title={actionTitle} onPress={onAction} style={{ marginTop: 8 }} />
+        <Button label={actionTitle} onPress={onAction} style={{ marginTop: 8 }} />
       )}
     </View>
   );

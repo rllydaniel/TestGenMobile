@@ -45,4 +45,5 @@ export interface TestHistoryItem {
   questionType: string;
   difficulty: string;
   completedAt: string;
+  timeTaken?: number;
 }

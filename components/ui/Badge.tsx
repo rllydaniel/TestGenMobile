@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { theme } from '@/lib/theme';
+import { FONTS, FONT_SIZES, RADIUS } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface BadgeProps {
   text: string;
@@ -9,31 +10,35 @@ interface BadgeProps {
   size?: 'sm' | 'md';
 }
 
-export function Badge({
+export const Badge = React.memo(function Badge({
   text,
-  color = theme.primary,
+  color,
   textColor,
   size = 'sm',
 }: BadgeProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.primary;
   const isSmall = size === 'sm';
+
   return (
     <View
       style={{
-        backgroundColor: color + '20',
+        backgroundColor: resolvedColor + '20',
         paddingHorizontal: isSmall ? 8 : 12,
         paddingVertical: isSmall ? 3 : 5,
-        borderRadius: 6,
+        borderRadius: RADIUS.xs,
       }}
     >
       <Text
         style={{
-          color: textColor ?? color,
-          fontSize: isSmall ? 11 : 13,
-          fontWeight: '600',
+          color: textColor ?? resolvedColor,
+          fontSize: isSmall ? FONT_SIZES.xs : FONT_SIZES.sm,
+          fontFamily: FONTS.sansMedium,
+          lineHeight: (isSmall ? FONT_SIZES.xs : FONT_SIZES.sm) * 1.5,
         }}
       >
         {text}
       </Text>
     </View>
   );
-}
+});

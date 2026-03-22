@@ -1,53 +1,171 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
-  useColorScheme,
+  Pressable,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card } from '@/components/ui/Card';
-import { ProgressBar } from '@/components/ui/ProgressBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/contexts/ThemeContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { AccuracyRing } from '@/components/ui/AccuracyRing';
 import { useFlashcardDecks } from '@/hooks/useFlashcards';
+import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
+
+function StatChip({
+  label,
+  value,
+  icon,
+  colors,
+}: {
+  label: string;
+  value: number | string;
+  icon: keyof typeof Ionicons.glyphMap;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  return (
+    <View
+      style={[
+        styles.statChip,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={16} color={colors.primary} />
+      <Text
+        style={{
+          fontFamily: FONTS.sansBold,
+          fontSize: FONT_SIZES.base,
+          color: colors.textPrimary,
+          includeFontPadding: false,
+        }}
+      >
+        {value}
+      </Text>
+      <Text
+        style={{
+          fontFamily: FONTS.sansRegular,
+          fontSize: FONT_SIZES.xs,
+          color: colors.textMuted,
+          includeFontPadding: false,
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
 
 export default function FlashcardsScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const { data: decks, isLoading } = useFlashcardDecks();
+
+  const stats = useMemo(() => {
+    if (!decks || decks.length === 0) {
+      return { totalCards: 0, mastered: 0, dueForReview: 0 };
+    }
+    const totalCards = decks.reduce((sum: number, d: any) => sum + (d.cardCount ?? 0), 0);
+    const mastered = decks.reduce((sum: number, d: any) => sum + (d.masteredCount ?? 0), 0);
+    const dueForReview = totalCards - mastered;
+    return { totalCards, mastered, dueForReview };
+  }, [decks]);
 
   if (isLoading) return <LoadingScreen message="Loading flashcards..." />;
 
-  return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: isDark ? '#1A1A2E' : '#F8F9FA' }}
-    >
-      <View style={{ flex: 1, padding: 16 }}>
-        <View
+  const renderDeckCard = ({ item }: { item: any }) => {
+    const mastery = item.cardCount > 0 ? Math.round((item.masteredCount / item.cardCount) * 100) : 0;
+
+    return (
+      <Pressable
+        onPress={() =>
+          router.push({ pathname: '/(app)/flashcards/[id]', params: { id: item.id } })
+        }
+        style={({ pressed }) => [
+          styles.deckCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            opacity: pressed ? 0.82 : 1,
+            transform: [{ scale: pressed ? 0.97 : 1 }],
+          },
+        ]}
+      >
+        <Text
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: 16,
-            gap: 12,
+            fontFamily: FONTS.sansBold,
+            fontSize: FONT_SIZES.base,
+            color: colors.textPrimary,
+            includeFontPadding: false,
+          }}
+          numberOfLines={2}
+        >
+          {item.name}
+        </Text>
+        <Text
+          style={{
+            fontFamily: FONTS.sansRegular,
+            fontSize: FONT_SIZES.sm,
+            color: colors.textMuted,
+            includeFontPadding: false,
           }}
         >
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color={isDark ? '#FFFFFF' : '#1A1A2E'}
-            />
-          </TouchableOpacity>
+          {item.cardCount} cards
+        </Text>
+        <View style={styles.ringContainer}>
+          <AccuracyRing accuracy={mastery} size={48} strokeWidth={4} />
           <Text
             style={{
-              fontSize: 24,
-              fontWeight: '800',
-              color: isDark ? '#FFFFFF' : '#1A1A2E',
+              fontFamily: FONTS.sansRegular,
+              fontSize: FONT_SIZES.xs,
+              color: colors.textMuted,
+              includeFontPadding: false,
+              marginTop: SPACING.xs,
+            }}
+          >
+            {item.masteredCount}/{item.cardCount}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: SPACING.screenH,
+          paddingTop: insets.top + SPACING.md,
+        }}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => ({
+              minHeight: 44,
+              justifyContent: 'center' as const,
+              opacity: pressed ? 0.82 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            })}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </Pressable>
+          <Text
+            style={{
+              fontSize: FONT_SIZES.xl,
+              fontFamily: FONTS.displaySemiBold,
+              color: colors.textPrimary,
+              lineHeight: FONT_SIZES.xl * 1.2,
+              includeFontPadding: false,
             }}
           >
             Flashcards
@@ -63,67 +181,82 @@ export default function FlashcardsScreen() {
             onAction={() => router.push('/(tabs)/generate')}
           />
         ) : (
-          <FlatList
-            data={decks}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ gap: 12 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: '/(app)/flashcards/[id]',
-                    params: { id: item.id },
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <Card>
-                  <View style={{ gap: 10 }}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 17,
-                          fontWeight: '700',
-                          color: isDark ? '#FFFFFF' : '#1A1A2E',
-                        }}
-                      >
-                        {item.name}
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={20}
-                        color={isDark ? '#4A5568' : '#CBD5E0'}
-                      />
-                    </View>
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        color: isDark ? '#ADB5BD' : '#6C757D',
-                      }}
-                    >
-                      {item.cardCount} cards · {item.masteredCount} mastered
-                    </Text>
-                    <ProgressBar
-                      progress={
-                        item.cardCount > 0
-                          ? item.masteredCount / item.cardCount
-                          : 0
-                      }
-                      color="#00CEC9"
-                    />
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            )}
-          />
+          <>
+            {/* Stat chips row */}
+            <View style={styles.statRow}>
+              <StatChip
+                label="Total Cards"
+                value={stats.totalCards}
+                icon="layers-outline"
+                colors={colors}
+              />
+              <StatChip
+                label="Mastered"
+                value={stats.mastered}
+                icon="checkmark-circle-outline"
+                colors={colors}
+              />
+              <StatChip
+                label="Due for Review"
+                value={stats.dueForReview}
+                icon="time-outline"
+                colors={colors}
+              />
+            </View>
+
+            {/* Deck grid */}
+            <FlatList
+              data={decks}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={styles.columnWrapper}
+              contentContainerStyle={styles.listContent}
+              renderItem={renderDeckCard}
+            />
+          </>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+    gap: 12,
+  },
+  statRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  statChip: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.sm,
+    borderWidth: 1,
+  },
+  columnWrapper: {
+    gap: SPACING.sm,
+  },
+  listContent: {
+    gap: SPACING.sm,
+    paddingBottom: 120,
+  },
+  deckCard: {
+    flex: 1,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    padding: SPACING.md,
+    minHeight: 44,
+    gap: SPACING.xs,
+  },
+  ringContainer: {
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+  },
+});

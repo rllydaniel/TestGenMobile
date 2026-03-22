@@ -1,9 +1,12 @@
 import { Link, Stack } from 'expo-router';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import { FONTS, FONT_SIZES, SPACING } from '@/constants/theme';
 
 export default function NotFoundScreen() {
+  const { colors } = useTheme();
+
   return (
     <>
       <Stack.Screen options={{ title: 'Not Found' }} />
@@ -12,17 +15,17 @@ export default function NotFoundScreen() {
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          padding: 20,
-          backgroundColor: theme.bg,
-          gap: 16,
+          padding: SPACING.screenH,
+          backgroundColor: colors.appBackground,
+          gap: SPACING.md,
         }}
       >
-        <Ionicons name="alert-circle-outline" size={64} color={theme.textMuted} />
-        <Text style={{ fontSize: 20, fontWeight: '700', color: theme.text }}>
+        <Ionicons name="alert-circle-outline" size={64} color={colors.textFaint} />
+        <Text style={{ fontSize: FONT_SIZES.lg, fontFamily: FONTS.sansBold, color: colors.textPrimary, lineHeight: FONT_SIZES.lg * 1.2 }}>
           Page Not Found
         </Text>
-        <Link href="/(tabs)" style={{ marginTop: 15, paddingVertical: 15 }}>
-          <Text style={{ fontSize: 16, color: theme.primary, fontWeight: '600' }}>
+        <Link href="/(tabs)" style={{ marginTop: SPACING.md, paddingVertical: SPACING.md }}>
+          <Text style={{ fontSize: FONT_SIZES.base, color: colors.primary, fontFamily: FONTS.sansSemiBold, lineHeight: FONT_SIZES.base * 1.5 }}>
             Go to Home
           </Text>
         </Link>

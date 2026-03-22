@@ -1,71 +1,34 @@
 import React from 'react';
-import { View, Text, ViewStyle } from 'react-native';
-import { theme } from '@/lib/theme';
+import { View, ViewStyle } from 'react-native';
+import { RADIUS, SHADOWS } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface CardProps {
   children: React.ReactNode;
   style?: ViewStyle;
-  borderColor?: string;
+  padding?: 'sm' | 'md' | 'lg' | 'none';
+  shadow?: 'sm' | 'md' | 'lg' | 'none';
 }
 
-interface CardHeaderProps {
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-}
+export const Card = ({ children, style, padding = 'md', shadow = 'md' }: CardProps) => {
+  const { colors } = useTheme();
+  const paddingMap = { sm: 12, md: 16, lg: 24, none: 0 };
 
-export function Card({ children, style, borderColor }: CardProps) {
   return (
     <View
       style={[
         {
-          backgroundColor: theme.card,
-          borderRadius: 14,
-          padding: 16,
+          backgroundColor: colors.surface,
+          borderRadius: RADIUS.lg,
           borderWidth: 1,
-          borderColor: borderColor ?? theme.cardBorder,
+          borderColor: colors.border,
+          padding: paddingMap[padding],
         },
+        shadow !== 'none' && SHADOWS[shadow],
         style,
       ]}
     >
       {children}
     </View>
   );
-}
-
-export function CardHeader({ title, subtitle, right }: CardHeaderProps) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: '700',
-            color: theme.text,
-          }}
-        >
-          {title}
-        </Text>
-        {subtitle && (
-          <Text
-            style={{
-              fontSize: 14,
-              color: theme.textSecondary,
-              marginTop: 2,
-            }}
-          >
-            {subtitle}
-          </Text>
-        )}
-      </View>
-      {right}
-    </View>
-  );
-}
+};

@@ -2,26 +2,26 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  useColorScheme,
-  Image,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useSupabase } from '@/hooks/useSupabase';
 import { uploadNotes } from '@/services/storage';
 import { generateQuizFromNotes } from '@/services/api';
+import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
 
 export default function UploadScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const supabase = useSupabase();
 
   const [file, setFile] = useState<{ uri: string; name: string; type: string } | null>(null);
@@ -41,16 +41,10 @@ export default function UploadScreen() {
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.8,
-    });
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      setFile({
-        uri: asset.uri,
-        name: `photo_${Date.now()}.jpg`,
-        type: 'image/jpeg',
-      });
+      setFile({ uri: asset.uri, name: `photo_${Date.now()}.jpg`, type: 'image/jpeg' });
       setError('');
     }
   };
@@ -73,13 +67,8 @@ export default function UploadScreen() {
         params: {
           id: 'upload',
           config: JSON.stringify({
-            subjectId: 'upload',
-            topicIds: [],
-            questionCount: questions.length,
-            questionType: 'Mixed',
-            difficulty: 'Medium',
-            timerEnabled: false,
-            timerMinutes: 0,
+            subjectId: 'upload', topicIds: [], questionCount: questions.length,
+            questionType: 'Mixed', difficulty: 'Medium', timerEnabled: false, timerMinutes: 0,
           }),
           questions: JSON.stringify(questions),
         },
@@ -92,177 +81,92 @@ export default function UploadScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: isDark ? '#1A1A2E' : '#F8F9FA' }}
-    >
-      <View style={{ flex: 1, padding: 16, gap: 20 }}>
-        {/* Header */}
+    <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
+      <View style={{ flex: 1, paddingHorizontal: SPACING.screenH, paddingTop: insets.top + SPACING.md, gap: SPACING.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons
-              name="close"
-              size={28}
-              color={isDark ? '#FFFFFF' : '#1A1A2E'}
-            />
-          </TouchableOpacity>
-          <Text
-            style={{
-              fontSize: 22,
-              fontWeight: '700',
-              color: isDark ? '#FFFFFF' : '#1A1A2E',
-            }}
-          >
+          <Pressable onPress={() => router.back()} style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Ionicons name="close" size={28} color={colors.textPrimary} />
+          </Pressable>
+          <Text style={{ fontSize: FONT_SIZES.xl - 2, fontFamily: FONTS.displaySemiBold, color: colors.textPrimary, lineHeight: (FONT_SIZES.xl - 2) * 1.2 }}>
             Upload Notes
           </Text>
         </View>
 
-        <Text
-          style={{
-            fontSize: 15,
-            color: isDark ? '#ADB5BD' : '#6C757D',
-            lineHeight: 22,
-          }}
-        >
-          Upload your notes, textbook pages, or study materials and we'll
-          generate a quiz from them using AI.
+        <Text style={{ fontSize: FONT_SIZES.base, fontFamily: FONTS.sansRegular, color: colors.textMuted, lineHeight: FONT_SIZES.base * 1.6 }}>
+          Upload your notes, textbook pages, or study materials and we'll generate a quiz from them using AI.
         </Text>
 
-        {/* Upload Options */}
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <TouchableOpacity
+          <Pressable
             onPress={pickDocument}
-            activeOpacity={0.7}
             style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              padding: 20,
-              borderRadius: 16,
-              borderWidth: 2,
-              borderColor: isDark ? '#2D3A5C' : '#E5E7EB',
-              borderStyle: 'dashed',
+              flex: 1, alignItems: 'center', gap: SPACING.sm, padding: 20,
+              borderRadius: RADIUS.lg, borderWidth: 2,
+              borderColor: colors.border, borderStyle: 'dashed',
+              minHeight: 44,
             }}
           >
-            <Ionicons name="document" size={32} color="#6C5CE7" />
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: '600',
-                color: isDark ? '#FFFFFF' : '#1A1A2E',
-              }}
-            >
+            <Ionicons name="document" size={32} color={colors.primary} />
+            <Text style={{ fontSize: FONT_SIZES.sm + 1, fontFamily: FONTS.sansSemiBold, color: colors.textPrimary, lineHeight: (FONT_SIZES.sm + 1) * 1.5 }}>
               Browse Files
             </Text>
-            <Text
-              style={{
-                fontSize: 12,
-                color: isDark ? '#ADB5BD' : '#6C757D',
-                textAlign: 'center',
-              }}
-            >
+            <Text style={{ fontSize: FONT_SIZES.xs, fontFamily: FONTS.sansRegular, color: colors.textMuted, textAlign: 'center', lineHeight: FONT_SIZES.xs * 1.5 }}>
               PDF, PPTX, Images
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             onPress={pickImage}
-            activeOpacity={0.7}
             style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              padding: 20,
-              borderRadius: 16,
-              borderWidth: 2,
-              borderColor: isDark ? '#2D3A5C' : '#E5E7EB',
-              borderStyle: 'dashed',
+              flex: 1, alignItems: 'center', gap: SPACING.sm, padding: 20,
+              borderRadius: RADIUS.lg, borderWidth: 2,
+              borderColor: colors.border, borderStyle: 'dashed',
+              minHeight: 44,
             }}
           >
-            <Ionicons name="camera" size={32} color="#FD79A8" />
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: '600',
-                color: isDark ? '#FFFFFF' : '#1A1A2E',
-              }}
-            >
+            <Ionicons name="camera" size={32} color={colors.warning} />
+            <Text style={{ fontSize: FONT_SIZES.sm + 1, fontFamily: FONTS.sansSemiBold, color: colors.textPrimary, lineHeight: (FONT_SIZES.sm + 1) * 1.5 }}>
               Take Photo
             </Text>
-            <Text
-              style={{
-                fontSize: 12,
-                color: isDark ? '#ADB5BD' : '#6C757D',
-                textAlign: 'center',
-              }}
-            >
+            <Text style={{ fontSize: FONT_SIZES.xs, fontFamily: FONTS.sansRegular, color: colors.textMuted, textAlign: 'center', lineHeight: FONT_SIZES.xs * 1.5 }}>
               Snap your notes
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
-        {/* Selected File Preview */}
         {file && (
-          <Card>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
+          <Card style={{ backgroundColor: colors.surface }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Ionicons
-                name={
-                  file.type.includes('image')
-                    ? 'image'
-                    : file.type.includes('pdf')
-                      ? 'document-text'
-                      : 'document'
-                }
+                name={file.type.includes('image') ? 'image' : file.type.includes('pdf') ? 'document-text' : 'document'}
                 size={32}
-                color="#6C5CE7"
+                color={colors.primary}
               />
               <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: '600',
-                    color: isDark ? '#FFFFFF' : '#1A1A2E',
-                  }}
-                  numberOfLines={1}
-                >
+                <Text style={{ fontSize: FONT_SIZES.base, fontFamily: FONTS.sansSemiBold, color: colors.textPrimary, lineHeight: FONT_SIZES.base * 1.5 }} numberOfLines={1}>
                   {file.name}
                 </Text>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: isDark ? '#ADB5BD' : '#6C757D',
-                  }}
-                >
+                <Text style={{ fontSize: FONT_SIZES.sm, fontFamily: FONTS.sansRegular, color: colors.textMuted, lineHeight: FONT_SIZES.sm * 1.5 }}>
                   Ready to process
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setFile(null)}>
-                <Ionicons name="close-circle" size={24} color="#FF6B6B" />
-              </TouchableOpacity>
+              <Pressable onPress={() => setFile(null)} style={{ minHeight: 44, justifyContent: 'center' }}>
+                <Ionicons name="close-circle" size={24} color={colors.error} />
+              </Pressable>
             </View>
           </Card>
         )}
 
         {error ? (
-          <Text style={{ color: '#FF6B6B', fontSize: 14, textAlign: 'center' }}>
+          <Text style={{ color: colors.error, fontSize: FONT_SIZES.sm + 1, fontFamily: FONTS.sansRegular, textAlign: 'center', lineHeight: (FONT_SIZES.sm + 1) * 1.5 }}>
             {error}
           </Text>
         ) : null}
 
         {(uploading || generating) && (
-          <View style={{ alignItems: 'center', gap: 12, paddingVertical: 16 }}>
-            <ActivityIndicator size="large" color="#6C5CE7" />
-            <Text
-              style={{
-                fontSize: 15,
-                color: isDark ? '#ADB5BD' : '#6C757D',
-              }}
-            >
+          <View style={{ alignItems: 'center', gap: 12, paddingVertical: SPACING.md }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ fontSize: FONT_SIZES.base, fontFamily: FONTS.sansRegular, color: colors.textMuted, lineHeight: FONT_SIZES.base * 1.5 }}>
               {uploading ? 'Uploading...' : 'Generating quiz from your notes...'}
             </Text>
           </View>
@@ -270,15 +174,17 @@ export default function UploadScreen() {
 
         <View style={{ flex: 1 }} />
 
-        <Button
-          title="Generate Quiz"
-          onPress={handleGenerate}
-          disabled={!file || uploading || generating}
-          loading={uploading || generating}
-          size="lg"
-          icon={<Ionicons name="sparkles" size={20} color="#FFFFFF" />}
-        />
+        <View style={{ paddingBottom: insets.bottom + SPACING.md }}>
+          <Button
+            label="Generate Quiz"
+            onPress={handleGenerate}
+            disabled={!file || uploading || generating}
+            loading={uploading || generating}
+            size="lg"
+            icon={<Ionicons name="sparkles" size={20} color={colors.textOnPrimary} />}
+          />
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

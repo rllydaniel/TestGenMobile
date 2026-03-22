@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, TextInput, Text, TextInputProps } from 'react-native';
-import { theme } from '@/lib/theme';
+import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -8,17 +9,24 @@ interface InputProps extends TextInputProps {
   icon?: React.ReactNode;
 }
 
-export function Input({ label, error, icon, style, ...props }: InputProps) {
+export const Input = React.memo(function Input({ label, error, icon, style, ...props }: InputProps) {
+  const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
+
+  const handleFocus = useCallback(() => setFocused(true), []);
+  const handleBlur = useCallback(() => setFocused(false), []);
 
   return (
     <View style={{ gap: 6 }}>
       {label && (
         <Text
           style={{
-            fontSize: 14,
-            fontWeight: '600',
-            color: theme.textSecondary,
+            fontSize: FONT_SIZES.xs,
+            fontFamily: FONTS.sansBold,
+            color: colors.textPrimary,
+            textTransform: 'uppercase',
+            letterSpacing: 1.2,
+            lineHeight: FONT_SIZES.xs * 1.5,
           }}
         >
           {label}
@@ -28,29 +36,32 @@ export function Input({ label, error, icon, style, ...props }: InputProps) {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: theme.card,
-          borderRadius: 12,
+          backgroundColor: colors.surface,
+          borderRadius: RADIUS.md,
+          height: 52,
           borderWidth: 1,
           borderColor: error
-            ? theme.danger
+            ? colors.error
             : focused
-              ? theme.primary
-              : theme.cardBorder,
-          paddingHorizontal: 14,
+              ? colors.borderFocus
+              : colors.border,
+          paddingHorizontal: SPACING.md,
           gap: 10,
         }}
       >
         {icon}
         <TextInput
-          placeholderTextColor={theme.textMuted}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          placeholderTextColor={colors.textFaint}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           style={[
             {
               flex: 1,
-              paddingVertical: 14,
-              fontSize: 16,
-              color: theme.text,
+              fontSize: FONT_SIZES.base,
+              fontFamily: FONTS.sansRegular,
+              color: colors.textPrimary,
+              paddingVertical: 0,
+              lineHeight: FONT_SIZES.base * 1.5,
             },
             style,
           ]}
@@ -58,10 +69,10 @@ export function Input({ label, error, icon, style, ...props }: InputProps) {
         />
       </View>
       {error && (
-        <Text style={{ fontSize: 12, color: theme.danger, marginTop: 2 }}>
+        <Text style={{ fontSize: FONT_SIZES.xs, fontFamily: FONTS.sansRegular, color: colors.error, marginTop: 2 }}>
           {error}
         </Text>
       )}
     </View>
   );
-}
+});

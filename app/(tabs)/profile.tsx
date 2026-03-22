@@ -3,21 +3,33 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Image,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MotiView } from 'moti';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/Label';
 import { useProfile } from '@/hooks/useProfile';
 import { useDashboardStats } from '@/hooks/useStats';
-import { theme } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import {
+  FONTS,
+  FONT_SIZES,
+  RADIUS,
+  SPACING,
+  SHADOWS,
+} from '@/constants/theme';
 
 export default function ProfileScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { signOut, user } = useAuth();
   const { data: profile } = useProfile();
   const { data: stats } = useDashboardStats();
@@ -26,145 +38,255 @@ export default function ProfileScreen() {
     {
       icon: 'trophy' as const,
       title: 'Achievements',
-      color: theme.warning,
+      color: colors.warning,
       onPress: () => router.push('/(app)/achievements'),
     },
     {
       icon: 'podium' as const,
       title: 'Leaderboard',
-      color: theme.primary,
+      color: colors.primary,
       onPress: () => router.push('/(app)/leaderboard'),
     },
     {
       icon: 'card' as const,
       title: 'Subscription',
-      color: theme.success,
+      color: colors.success,
       onPress: () => router.push('/(app)/subscription'),
     },
     {
       icon: 'settings' as const,
       title: 'Settings',
-      color: theme.textMuted,
+      color: colors.textMuted,
       onPress: () => router.push('/(app)/settings'),
     },
   ];
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 32 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + SPACING.lg,
+          paddingHorizontal: SPACING.screenH,
+          paddingBottom: 80 + insets.bottom + SPACING.xl,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
-        <View style={{ alignItems: 'center', gap: 12, paddingVertical: 8 }}>
-          {user?.user_metadata?.avatar_url ? (
-            <Image
-              source={{ uri: user.user_metadata.avatar_url }}
-              style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: theme.primary }}
-            />
-          ) : (
-            <View
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: theme.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontSize: 32, fontWeight: '700', color: '#FFFFFF' }}>
-                {(profile?.username ?? user?.user_metadata?.username ?? 'U')[0].toUpperCase()}
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300 }}
+        >
+          <View style={styles.profileHeader}>
+            {user?.user_metadata?.avatar_url ? (
+              <Image
+                source={{ uri: user.user_metadata.avatar_url }}
+                style={[styles.avatar, { borderColor: colors.primary }]}
+              />
+            ) : (
+              <View style={[styles.avatarFallback, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarLetter, { color: colors.textOnPrimary }]}>
+                  {(
+                    profile?.username ??
+                    user?.user_metadata?.username ??
+                    'U'
+                  )[0].toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={{ alignItems: 'center' }}>
+              <Text style={[styles.userName, { color: colors.textPrimary }]}>
+                {profile?.username ??
+                  user?.user_metadata?.username ??
+                  'Student'}
               </Text>
+              <Text style={[styles.userEmail, { color: colors.textMuted }]}>{user?.email ?? ''}</Text>
             </View>
-          )}
-          <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: theme.text }}>
-              {profile?.username ?? user?.user_metadata?.username ?? 'Student'}
-            </Text>
-            <Text style={{ fontSize: 14, color: theme.textSecondary }}>
-              {user?.email ?? ''}
-            </Text>
           </View>
-        </View>
+        </MotiView>
 
         {/* Stats Row */}
-        <Card>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: theme.text }}>
-                {stats?.testsCompleted ?? 0}
-              </Text>
-              <Text style={{ fontSize: 12, color: theme.textSecondary }}>Tests</Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: theme.cardBorder }} />
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: theme.text }}>
-                {stats?.averageScore ?? 0}%
-              </Text>
-              <Text style={{ fontSize: 12, color: theme.textSecondary }}>Avg Score</Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: theme.cardBorder }} />
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: theme.primary }}>
-                {profile?.subscriptionTier === 'premium'
-                  ? 'PRO'
-                  : profile?.subscriptionTier === 'basic'
-                    ? 'Basic'
-                    : 'Free'}
-              </Text>
-              <Text style={{ fontSize: 12, color: theme.textSecondary }}>Plan</Text>
-            </View>
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300, delay: 100 }}
+        >
+          <View style={{ marginBottom: SPACING.lg }}>
+            <Card shadow="md">
+              <View style={styles.statsRow}>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={[styles.statsValue, { color: colors.textPrimary }]}>
+                    {stats?.testsCompleted ?? 0}
+                  </Text>
+                  <Text style={[styles.statsLabel, { color: colors.textMuted }]}>Tests</Text>
+                </View>
+                <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={[styles.statsValue, { color: colors.textPrimary }]}>
+                    {stats?.averageScore ?? 0}%
+                  </Text>
+                  <Text style={[styles.statsLabel, { color: colors.textMuted }]}>Avg Score</Text>
+                </View>
+                <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={[styles.statsValue, { color: colors.primary }]}>
+                    {profile?.subscriptionTier === 'premium'
+                      ? 'PRO'
+                      : profile?.subscriptionTier === 'basic'
+                        ? 'Basic'
+                        : 'Free'}
+                  </Text>
+                  <Text style={[styles.statsLabel, { color: colors.textMuted }]}>Plan</Text>
+                </View>
+              </View>
+            </Card>
           </View>
-        </Card>
+        </MotiView>
 
         {/* Menu Items */}
-        <View style={{ gap: 8 }}>
-          {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.title}
-              onPress={item.onPress}
-              activeOpacity={0.7}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: theme.card,
-                borderRadius: 14,
-                padding: 14,
-                gap: 14,
-                borderWidth: 1,
-                borderColor: theme.cardBorder,
-              }}
-            >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  backgroundColor: item.color + '20',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name={item.icon} size={22} color={item.color} />
-              </View>
-              <Text style={{ flex: 1, fontSize: 16, fontWeight: '600', color: theme.text }}>
-                {item.title}
-              </Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300, delay: 200 }}
+        >
+          <View style={{ marginBottom: SPACING.lg }}>
+            <SectionLabel>ACCOUNT</SectionLabel>
+            <View style={{ gap: SPACING.sm }}>
+              {menuItems.map((item) => (
+                <Pressable
+                  key={item.title}
+                  onPress={item.onPress}
+                  style={({ pressed }) => [
+                    styles.menuItem,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.menuIconCircle,
+                      { backgroundColor: item.color + '20' },
+                    ]}
+                  >
+                    <Ionicons name={item.icon} size={22} color={item.color} />
+                  </View>
+                  <Text style={[styles.menuTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          </View>
 
-        {/* Sign Out */}
-        <Button
-          title="Sign Out"
-          onPress={() => signOut()}
-          variant="outline"
-          size="lg"
-          icon={<Ionicons name="log-out-outline" size={20} color={theme.textSecondary} />}
-        />
+          {/* Sign Out */}
+          <Button
+            label="Sign Out"
+            onPress={() => signOut()}
+            variant="outline"
+            size="lg"
+            fullWidth
+            icon={
+              <Ionicons
+                name="log-out-outline"
+                size={20}
+                color={colors.primary}
+              />
+            }
+          />
+        </MotiView>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Styles                                                             */
+/* ------------------------------------------------------------------ */
+
+const styles = StyleSheet.create({
+  /* profile header */
+  profileHeader: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+  },
+  avatarFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    fontSize: FONT_SIZES.display,
+    fontFamily: FONTS.sansBold,
+    lineHeight: FONT_SIZES.display * 1.2,
+  },
+  userName: {
+    fontSize: FONT_SIZES.lg + 2,
+    fontFamily: FONTS.displaySemiBold,
+    lineHeight: (FONT_SIZES.lg + 2) * 1.2,
+  },
+  userEmail: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.sansRegular,
+    lineHeight: FONT_SIZES.sm * 1.5,
+  },
+
+  /* stats row */
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statsValue: {
+    fontSize: FONT_SIZES.lg + 2,
+    fontFamily: FONTS.displaySemiBold,
+    lineHeight: (FONT_SIZES.lg + 2) * 1.2,
+  },
+  statsLabel: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: FONTS.sansRegular,
+    lineHeight: FONT_SIZES.xs * 1.5,
+  },
+  statsDivider: {
+    width: 1,
+  },
+
+  /* menu items */
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    padding: 14,
+    gap: 14,
+    borderWidth: 1,
+    minHeight: 44,
+    ...SHADOWS.sm,
+  },
+  menuIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuTitle: {
+    flex: 1,
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONTS.sansMedium,
+    lineHeight: FONT_SIZES.base * 1.5,
+  },
+});

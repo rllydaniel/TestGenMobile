@@ -18,6 +18,10 @@ export default function AppLayout() {
       <Stack.Screen name="settings" />
       <Stack.Screen name="achievements" />
       <Stack.Screen name="leaderboard" />
+      <Stack.Screen name="tutor" />
+      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="guide-detail" />
+      <Stack.Screen name="create" />
     </Stack>
   );
 }

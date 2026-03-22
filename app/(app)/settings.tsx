@@ -3,131 +3,325 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card } from '@/components/ui/Card';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/Label';
 import { useAppStore } from '@/stores/app-store';
-import { theme as t } from '@/lib/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
+import * as Haptics from 'expo-haptics';
+
+const THEME_OPTIONS = [
+  {
+    key: 'system' as const,
+    label: 'System',
+    description: 'Follows your device setting',
+    icon: 'phone-portrait-outline' as const,
+  },
+  {
+    key: 'light' as const,
+    label: 'Light',
+    description: 'Always use light mode',
+    icon: 'sunny-outline' as const,
+  },
+  {
+    key: 'dark' as const,
+    label: 'Dark',
+    description: 'Always use dark mode',
+    icon: 'moon-outline' as const,
+  },
+];
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
-  const { theme, setTheme, soundEnabled, setSoundEnabled, hapticEnabled, setHapticEnabled } =
+  const { colors, preference, setPreference } = useTheme();
+  const { soundEnabled, setSoundEnabled, hapticEnabled, setHapticEnabled } =
     useAppStore();
 
-  const themeOptions = ['system', 'light', 'dark'] as const;
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={t.text} />
-          </TouchableOpacity>
-          <Text style={{ fontSize: 24, fontWeight: '800', color: t.text }}>Settings</Text>
-        </View>
-
-        <Card>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: t.text, marginBottom: 12 }}>
-            Appearance
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {themeOptions.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                onPress={() => setTheme(opt)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  backgroundColor: theme === opt ? t.primary : t.surface,
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: theme === opt ? t.primary : t.cardBorder,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: theme === opt ? '#FFFFFF' : t.textSecondary,
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  {opt}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Card>
-
-        <Card>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: t.text, marginBottom: 12 }}>
-            Feedback
-          </Text>
-          <SettingToggle label="Sound Effects" value={soundEnabled} onToggle={setSoundEnabled} />
-          <View style={{ height: 12 }} />
-          <SettingToggle label="Haptic Feedback" value={hapticEnabled} onToggle={setHapticEnabled} />
-        </Card>
-
-        <Card>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: t.text, marginBottom: 12 }}>
-            About
-          </Text>
-          <SettingLink label="Privacy Policy" onPress={() => Linking.openURL('https://testgen.org/privacy')} />
-          <SettingLink label="Terms of Service" onPress={() => Linking.openURL('https://testgen.org/terms')} />
-          <SettingLink label="Contact Us" onPress={() => Linking.openURL('https://testgen.org/contact')} />
-          <View style={{ marginTop: 8 }}>
-            <Text style={{ fontSize: 13, color: t.textMuted, textAlign: 'center' }}>
-              TestGen v1.0.0
-            </Text>
-          </View>
-        </Card>
-
-        <Button title="Sign Out" onPress={() => signOut()} variant="destructive" size="lg" />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function SettingToggle({ label, value, onToggle }: { label: string; value: boolean; onToggle: (v: boolean) => void }) {
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Text style={{ fontSize: 15, color: t.text }}>{label}</Text>
-      <TouchableOpacity
-        onPress={() => onToggle(!value)}
-        style={{
-          width: 52, height: 30, borderRadius: 15,
-          backgroundColor: value ? t.primary : t.cardBorder,
-          justifyContent: 'center', padding: 2,
+    <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: SPACING.screenH,
+          paddingTop: insets.top + SPACING.md,
+          gap: SPACING.lg,
+          paddingBottom: 120,
         }}
       >
-        <View
-          style={{
-            width: 26, height: 26, borderRadius: 13,
-            backgroundColor: '#FFFFFF',
-            alignSelf: value ? 'flex-end' : 'flex-start',
-          }}
-        />
-      </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Pressable
+            onPress={() => router.back()}
+            onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            style={({ pressed }) => ({
+              minHeight: 44,
+              justifyContent: 'center',
+              opacity: pressed ? 0.82 : 1,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            })}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </Pressable>
+          <Text
+            style={{
+              fontSize: FONT_SIZES.xl,
+              fontFamily: FONTS.displaySemiBold,
+              color: colors.textPrimary,
+              lineHeight: FONT_SIZES.xl * 1.2,
+              flex: 1,
+            }}
+            numberOfLines={1}
+          >
+            Settings
+          </Text>
+        </View>
+
+        {/* COLOR SCHEME */}
+        <View>
+          <SectionLabel>COLOR SCHEME</SectionLabel>
+          <View style={{ gap: SPACING.sm }}>
+            {THEME_OPTIONS.map((opt) => {
+              const selected = preference === opt.key;
+              return (
+                <Pressable
+                  key={opt.key}
+                  onPress={() => setPreference(opt.key)}
+                  onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: SPACING.md,
+                    padding: SPACING.md,
+                    borderRadius: RADIUS.md,
+                    backgroundColor: colors.surface,
+                    borderWidth: selected ? 2 : 1,
+                    borderColor: selected ? colors.primary : colors.border,
+                    minHeight: 44,
+                    opacity: pressed ? 0.82 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  })}
+                >
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: RADIUS.md,
+                      backgroundColor: selected ? colors.primaryLight : colors.surfaceSecondary,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons
+                      name={opt.icon}
+                      size={22}
+                      color={selected ? colors.primary : colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: FONT_SIZES.base,
+                        fontFamily: FONTS.sansSemiBold,
+                        color: colors.textPrimary,
+                        lineHeight: FONT_SIZES.base * 1.5,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {opt.label}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: FONT_SIZES.sm,
+                        fontFamily: FONTS.sansRegular,
+                        color: colors.textMuted,
+                        lineHeight: FONT_SIZES.sm * 1.5,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {opt.description}
+                    </Text>
+                  </View>
+                  {selected && (
+                    <View
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        backgroundColor: colors.primary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* FEEDBACK */}
+        <View>
+          <SectionLabel>FEEDBACK</SectionLabel>
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: RADIUS.md,
+              padding: SPACING.md,
+              gap: 12,
+            }}
+          >
+            <SettingToggle label="Sound Effects" value={soundEnabled} onToggle={setSoundEnabled} colors={colors} />
+            <SettingToggle label="Haptic Feedback" value={hapticEnabled} onToggle={setHapticEnabled} colors={colors} />
+          </View>
+        </View>
+
+        {/* ABOUT */}
+        <View>
+          <SectionLabel>ABOUT</SectionLabel>
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: RADIUS.md,
+              padding: SPACING.md,
+            }}
+          >
+            <SettingLink
+              label="Privacy Policy"
+              onPress={() => Linking.openURL('https://testgen.org/privacy')}
+              colors={colors}
+            />
+            <SettingLink
+              label="Terms of Service"
+              onPress={() => Linking.openURL('https://testgen.org/terms')}
+              colors={colors}
+            />
+            <SettingLink
+              label="Contact Us"
+              onPress={() => Linking.openURL('https://testgen.org/contact')}
+              colors={colors}
+            />
+            <View style={{ marginTop: SPACING.sm }}>
+              <Text
+                style={{
+                  fontSize: FONT_SIZES.sm,
+                  fontFamily: FONTS.sansRegular,
+                  color: colors.textFaint,
+                  textAlign: 'center',
+                  lineHeight: FONT_SIZES.sm * 1.5,
+                }}
+              >
+                TestGen v1.0.0
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <Button label="Sign Out" onPress={() => signOut()} variant="destructive" size="lg" />
+      </ScrollView>
     </View>
   );
 }
 
-function SettingLink({ label, onPress }: { label: string; onPress: () => void }) {
+function SettingToggle({
+  label,
+  value,
+  onToggle,
+  colors,
+}: {
+  label: string;
+  value: boolean;
+  onToggle: (v: boolean) => void;
+  colors: any;
+}) {
   return (
-    <TouchableOpacity
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text
+        style={{
+          fontSize: FONT_SIZES.base,
+          fontFamily: FONTS.sansRegular,
+          color: colors.textPrimary,
+          lineHeight: FONT_SIZES.base * 1.5,
+          flexShrink: 1,
+        }}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      <Pressable
+        onPress={() => onToggle(!value)}
+        onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+        style={({ pressed }) => ({
+          width: 52,
+          height: 30,
+          borderRadius: 15,
+          backgroundColor: value ? colors.primary : colors.border,
+          justifyContent: 'center',
+          padding: 2,
+          minHeight: 44,
+          opacity: pressed ? 0.82 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            backgroundColor: colors.surface,
+            alignSelf: value ? 'flex-end' : 'flex-start',
+          }}
+        />
+      </Pressable>
+    </View>
+  );
+}
+
+function SettingLink({
+  label,
+  onPress,
+  colors,
+}: {
+  label: string;
+  onPress: () => void;
+  colors: any;
+}) {
+  return (
+    <Pressable
       onPress={onPress}
-      style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}
+      onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 10,
+        minHeight: 44,
+        opacity: pressed ? 0.82 : 1,
+        transform: [{ scale: pressed ? 0.98 : 1 }],
+      })}
     >
-      <Text style={{ fontSize: 15, color: t.text }}>{label}</Text>
-      <Ionicons name="open-outline" size={18} color={t.textMuted} />
-    </TouchableOpacity>
+      <Text
+        style={{
+          fontSize: FONT_SIZES.base,
+          fontFamily: FONTS.sansRegular,
+          color: colors.textPrimary,
+          lineHeight: FONT_SIZES.base * 1.5,
+          flex: 1,
+        }}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      <Ionicons name="open-outline" size={18} color={colors.textFaint} />
+    </Pressable>
   );
 }
