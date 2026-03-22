@@ -1,7 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Platform, LayoutChangeEvent } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import React, { useCallback, useState, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
@@ -16,9 +14,6 @@ interface QuestionCountSliderProps {
   isPremium?: boolean;
 }
 
-const THUMB_SIZE = 28;
-const TRACK_HEIGHT = 6;
-
 export function QuestionCountSlider({
   value,
   onChange,
@@ -29,96 +24,38 @@ export function QuestionCountSlider({
   isPremium = false,
 }: QuestionCountSliderProps) {
   const { colors } = useTheme();
-  const [trackWidth, setTrackWidth] = useState(0);
 
-  const translateX = useSharedValue(0);
-  const startX = useSharedValue(0);
-
-  const valueToPosition = useCallback(
-    (val: number) => {
-      if (trackWidth === 0) return 0;
-      const fraction = (val - min) / (max - min);
-      return fraction * trackWidth;
-    },
-    [trackWidth, min, max],
-  );
-
-  const positionToValue = useCallback(
-    (pos: number) => {
-      if (trackWidth === 0) return min;
-      const fraction = Math.max(0, Math.min(1, pos / trackWidth));
-      const rawValue = min + fraction * (max - min);
-      const snapped = Math.round(rawValue / step) * step;
-      return Math.max(min, Math.min(max, snapped));
-    },
-    [trackWidth, min, max, step],
-  );
-
-  // Keep shared value in sync with prop value
-  React.useEffect(() => {
-    const pos = valueToPosition(value);
-    translateX.value = withSpring(pos, { damping: 20, stiffness: 200 });
-  }, [value, trackWidth]);
-
-  const triggerHaptic = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  // Generate all valid step values
+  const steps = useMemo(() => {
+    const result: number[] = [];
+    for (let v = min; v <= max; v += step) {
+      result.push(v);
     }
-  }, []);
+    return result;
+  }, [min, max, step]);
 
-  const handleChange = useCallback(
-    (newValue: number) => {
-      if (newValue !== value) {
-        triggerHaptic();
-        onChange(newValue);
+  const handleSelect = useCallback(
+    (val: number) => {
+      if (val !== value) {
+        if (Platform.OS !== 'web') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        onChange(val);
       }
     },
-    [value, onChange, triggerHaptic],
+    [value, onChange],
   );
 
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      startX.value = translateX.value;
-    })
-    .onUpdate((event) => {
-      const newPos = Math.max(0, Math.min(trackWidth, startX.value + event.translationX));
-      translateX.value = newPos;
-      const newValue = positionToValue(newPos);
-      runOnJS(handleChange)(newValue);
-    })
-    .onEnd(() => {
-      const snappedValue = positionToValue(translateX.value);
-      const snappedPos = valueToPosition(snappedValue);
-      translateX.value = withSpring(snappedPos, { damping: 20, stiffness: 200 });
-      runOnJS(handleChange)(snappedValue);
-    });
-
-  const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value - THUMB_SIZE / 2 }],
-  }));
-
-  const activeTrackStyle = useAnimatedStyle(() => ({
-    width: translateX.value,
-  }));
-
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    setTrackWidth(event.nativeEvent.layout.width);
-  }, []);
-
   const showProBadge = value > freeMax && !isPremium;
+  const fraction = (value - min) / (max - min);
 
   return (
     <View style={styles.container}>
       {/* Value display */}
       <View style={styles.valueRow}>
-          <Text
-            style={[
-              styles.valueText,
-              { color: colors.textPrimary },
-            ]}
-          >
-            {value}
-          </Text>
+        <Text style={[styles.valueText, { color: colors.textPrimary }]}>
+          {value}
+        </Text>
         {showProBadge && (
           <View style={styles.proBadge}>
             <Text style={styles.proBadgeText}>PRO</Text>
@@ -126,38 +63,82 @@ export function QuestionCountSlider({
         )}
       </View>
 
-      {/* Slider track */}
-      <View style={styles.sliderContainer}>
-        <View
-          style={[styles.track, { backgroundColor: colors.border }]}
-          onLayout={handleLayout}
-        >
-          <Animated.View
+      {/* Track with tick marks */}
+      <View style={styles.trackContainer}>
+        {/* Background track */}
+        <View style={[styles.track, { backgroundColor: colors.border }]}>
+          {/* Active fill */}
+          <View
             style={[
               styles.activeTrack,
-              { backgroundColor: colors.primary },
-              activeTrackStyle,
+              {
+                backgroundColor: colors.primary,
+                width: `${fraction * 100}%`,
+              },
             ]}
           />
         </View>
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[
-              styles.thumb,
-              {
-                backgroundColor: colors.primary,
-                ...SHADOWS.md,
-              },
-              thumbStyle,
-            ]}
-          />
-        </GestureDetector>
+
+        {/* Tick marks / step buttons */}
+        <View style={styles.tickRow}>
+          {steps.map((stepVal) => {
+            const pos = ((stepVal - min) / (max - min)) * 100;
+            const isSelected = stepVal === value;
+            const isActive = stepVal <= value;
+            return (
+              <Pressable
+                key={stepVal}
+                onPress={() => handleSelect(stepVal)}
+                style={[
+                  styles.tickButton,
+                  { left: `${pos}%` },
+                ]}
+                hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }}
+              >
+                <View
+                  style={[
+                    isSelected ? styles.thumbDot : styles.tickDot,
+                    {
+                      backgroundColor: isSelected
+                        ? colors.primary
+                        : isActive
+                        ? colors.primary
+                        : colors.border,
+                    },
+                    isSelected && SHADOWS.md,
+                  ]}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
-      {/* Min / Max labels */}
+      {/* Step labels */}
       <View style={styles.labelsRow}>
-        <Text style={[styles.labelText, { color: colors.textMuted }]}>{min}</Text>
-        <Text style={[styles.labelText, { color: colors.textMuted }]}>{max}</Text>
+        {steps.map((stepVal) => {
+          const pos = ((stepVal - min) / (max - min)) * 100;
+          const isSelected = stepVal === value;
+          return (
+            <Pressable
+              key={stepVal}
+              onPress={() => handleSelect(stepVal)}
+              style={[styles.labelButton, { left: `${pos}%` }]}
+            >
+              <Text
+                style={[
+                  styles.labelText,
+                  {
+                    color: isSelected ? colors.primary : colors.textMuted,
+                    fontFamily: isSelected ? FONTS.sansBold : FONTS.sansRegular,
+                  },
+                ]}
+              >
+                {stepVal}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* Upsell text */}
@@ -173,12 +154,13 @@ export function QuestionCountSlider({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
+    paddingTop: SPACING.sm,
   },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
     gap: SPACING.sm,
   },
   valueText: {
@@ -198,42 +180,67 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansBold,
     includeFontPadding: false,
   },
-  sliderContainer: {
+  trackContainer: {
     width: '100%',
-    height: THUMB_SIZE,
+    height: 28,
     justifyContent: 'center',
+    marginBottom: SPACING.xs,
   },
   track: {
-    height: TRACK_HEIGHT,
-    borderRadius: TRACK_HEIGHT / 2,
+    height: 6,
+    borderRadius: 3,
     width: '100%',
     overflow: 'hidden',
   },
   activeTrack: {
-    height: TRACK_HEIGHT,
-    borderRadius: TRACK_HEIGHT / 2,
+    height: 6,
+    borderRadius: 3,
   },
-  thumb: {
+  tickRow: {
     position: 'absolute',
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: THUMB_SIZE / 2,
+    left: 0,
+    right: 0,
+    height: 28,
+  },
+  tickButton: {
+    position: 'absolute',
+    top: 0,
+    width: 28,
+    height: 28,
+    marginLeft: -14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tickDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  thumbDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
   labelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     width: '100%',
-    marginTop: SPACING.xs,
+    height: 20,
+    position: 'relative',
+  },
+  labelButton: {
+    position: 'absolute',
+    top: 0,
+    marginLeft: -14,
+    width: 28,
+    alignItems: 'center',
   },
   labelText: {
     fontSize: FONT_SIZES.xs,
-    fontFamily: FONTS.sansRegular,
     includeFontPadding: false,
   },
   upsellText: {
     fontSize: FONT_SIZES.sm,
     fontFamily: FONTS.sansRegular,
-    marginTop: SPACING.sm,
+    marginTop: SPACING.md,
     includeFontPadding: false,
   },
 });

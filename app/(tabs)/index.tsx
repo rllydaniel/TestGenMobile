@@ -16,6 +16,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { SectionLabel } from '@/components/ui/Label';
 import { AccuracyRing } from '@/components/ui/AccuracyRing';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useDashboardStats, useStreak } from '@/hooks/useStats';
 import { useProfile } from '@/hooks/useProfile';
 import { useTestHistory } from '@/hooks/useTests';
@@ -217,10 +218,12 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { data: stats } = useDashboardStats();
-  const { data: streak } = useStreak();
-  const { data: profile } = useProfile();
-  const { data: tests } = useTestHistory();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: streak, isLoading: streakLoading } = useStreak();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: tests, isLoading: testsLoading } = useTestHistory();
+
+  const isLoading = statsLoading || streakLoading || profileLoading || testsLoading;
 
   /* ---------- derived data ---------- */
 
@@ -278,6 +281,14 @@ export default function HomeScreen() {
   );
 
   /* ---------- render ---------- */
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.appBackground, paddingTop: insets.top + SPACING.lg }}>
+        <DashboardSkeleton />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.appBackground }}>

@@ -13,7 +13,7 @@ import { FadeInView } from '@/components/ui/FadeInView';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { TestHistorySkeleton } from '@/components/ui/Skeleton';
 import { SectionLabel } from '@/components/ui/Label';
 import { useTestHistory } from '@/hooks/useTests';
 import { subjects } from '@/lib/subjects';
@@ -35,7 +35,16 @@ export default function HistoryScreen() {
   const { data: tests, isLoading } = useTestHistory();
   const [searchQuery, setSearchQuery] = useState('');
 
-  if (isLoading) return <LoadingScreen message="Loading history..." />;
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.appBackground, paddingTop: insets.top + SPACING.lg, paddingHorizontal: SPACING.screenH }}>
+        <Text style={{ fontSize: FONT_SIZES.xxl, fontFamily: FONTS.displaySemiBold, color: colors.textPrimary, marginBottom: SPACING.lg, includeFontPadding: false }}>
+          Test History
+        </Text>
+        <TestHistorySkeleton />
+      </View>
+    );
+  }
 
   const filteredTests = (tests ?? []).filter((t) => {
     if (!searchQuery) return true;

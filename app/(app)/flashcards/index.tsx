@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { FlashcardsSkeleton } from '@/components/ui/Skeleton';
 import { AccuracyRing } from '@/components/ui/AccuracyRing';
 import { useFlashcardDecks } from '@/hooks/useFlashcards';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
@@ -78,7 +78,21 @@ export default function FlashcardsScreen() {
     return { totalCards, mastered, dueForReview };
   }, [decks]);
 
-  if (isLoading) return <LoadingScreen message="Loading flashcards..." />;
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.appBackground, paddingTop: insets.top + SPACING.md, paddingHorizontal: SPACING.screenH }}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </Pressable>
+          <Text style={{ fontSize: FONT_SIZES.xl, fontFamily: FONTS.displaySemiBold, color: colors.textPrimary, includeFontPadding: false }}>
+            Flashcards
+          </Text>
+        </View>
+        <FlashcardsSkeleton />
+      </View>
+    );
+  }
 
   const renderDeckCard = ({ item }: { item: any }) => {
     const mastery = item.cardCount > 0 ? Math.round((item.masteredCount / item.cardCount) * 100) : 0;

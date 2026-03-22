@@ -21,7 +21,7 @@ export function FadeInView({
 }: FadeInViewProps) {
   return (
     <Animated.View
-      entering={FadeInDown.delay(delay).duration(duration).springify().damping(20)}
+      entering={FadeInDown.delay(delay).duration(duration)}
       style={style}
     >
       {children}
