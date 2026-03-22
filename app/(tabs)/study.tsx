@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MotiView } from 'moti';
+import { FadeInView } from '@/components/ui/FadeInView';
 import * as Haptics from 'expo-haptics';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -303,11 +303,7 @@ export default function StudyScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ===== Header ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300 }}
-        >
+        <FadeInView delay={0} duration={300}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: colors.textPrimary }]}>Flashcards</Text>
@@ -324,14 +320,10 @@ export default function StudyScreen() {
               }
             />
           </View>
-        </MotiView>
+        </FadeInView>
 
         {/* ===== Filter Pills & Search ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 100 }}
-        >
+        <FadeInView delay={100} duration={300}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -359,14 +351,10 @@ export default function StudyScreen() {
               }
             />
           </View>
-        </MotiView>
+        </FadeInView>
 
         {/* ===== Due Review Banner & Deck Grid ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 200 }}
-        >
+        <FadeInView delay={200} duration={300}>
           {totalDue > 0 && (
             <Pressable
               onPress={handleReviewDue}
@@ -426,7 +414,7 @@ export default function StudyScreen() {
               </View>
             </View>
           )}
-        </MotiView>
+        </FadeInView>
       </ScrollView>
     </View>
   );

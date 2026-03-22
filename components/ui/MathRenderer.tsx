@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { View, Text, TextStyle, StyleSheet } from 'react-native';
-import { MathJaxSvg } from 'react-native-mathjax-html-to-svg';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FONTS, FONT_SIZES, SPACING } from '@/constants/theme';
 
@@ -15,11 +14,16 @@ interface MathRendererProps {
   fontSize?: number;
 }
 
+/**
+ * Parses text containing LaTeX math notation.
+ * - $$...$$ for block/display math
+ * - $...$ for inline math
+ * - Everything else as plain text
+ */
 export function parseMathContent(text: string): MathSegment[] {
   const segments: MathSegment[] = [];
   let remaining = text;
 
-  // Temporary placeholders for block math so they aren't consumed by inline regex
   const blockMaths: string[] = [];
   remaining = remaining.replace(/\$\$([\s\S]+?)\$\$/g, (_match, inner) => {
     const index = blockMaths.length;
@@ -27,18 +31,15 @@ export function parseMathContent(text: string): MathSegment[] {
     return `\0BLOCK_MATH_${index}\0`;
   });
 
-  // Split on block math placeholders
   const blockParts = remaining.split(/\0BLOCK_MATH_(\d+)\0/);
 
   for (let i = 0; i < blockParts.length; i++) {
     if (i % 2 === 1) {
-      // This is a block math index
       const mathContent = blockMaths[parseInt(blockParts[i], 10)];
       if (mathContent) {
         segments.push({ type: 'block-math', content: mathContent.trim() });
       }
     } else {
-      // This part may contain inline math
       const part = blockParts[i];
       if (!part) continue;
 
@@ -46,7 +47,6 @@ export function parseMathContent(text: string): MathSegment[] {
 
       for (let j = 0; j < inlineParts.length; j++) {
         if (j % 2 === 1) {
-          // Inline math capture group
           segments.push({ type: 'inline-math', content: inlineParts[j] });
         } else {
           const textContent = inlineParts[j];
@@ -61,6 +61,12 @@ export function parseMathContent(text: string): MathSegment[] {
   return segments;
 }
 
+/**
+ * Renders text with math notation.
+ * Math segments are displayed in italic with a monospace feel.
+ * To enable full LaTeX rendering, install react-native-mathjax-html-to-svg
+ * and replace the fallback rendering below.
+ */
 export function MathRenderer({ content, style, fontSize }: MathRendererProps) {
   const { colors } = useTheme();
   const resolvedFontSize = fontSize ?? FONT_SIZES.base;
@@ -70,48 +76,31 @@ export function MathRenderer({ content, style, fontSize }: MathRendererProps) {
   const textColor = (style?.color as string) ?? colors.textPrimary;
 
   return (
-    <Text style={[styles.wrapper, { color: textColor, fontFamily: FONTS.sansRegular, fontSize: resolvedFontSize }, style]}>
+    <Text
+      style={[
+        styles.wrapper,
+        { color: textColor, fontFamily: FONTS.sansRegular, fontSize: resolvedFontSize },
+        style,
+      ]}
+    >
       {segments.map((segment, index) => {
         if (segment.type === 'text') {
-          return (
-            <Text
-              key={index}
-              style={[
-                styles.text,
-                {
-                  color: textColor,
-                  fontFamily: FONTS.sansRegular,
-                  fontSize: resolvedFontSize,
-                },
-              ]}
-            >
-              {segment.content}
-            </Text>
-          );
+          return <Text key={index}>{segment.content}</Text>;
         }
 
         if (segment.type === 'block-math') {
           return (
-            <View key={index} style={styles.blockMathWrapper}>
-              <MathJaxSvg
-                color={colors.textPrimary}
-                fontSize={resolvedFontSize}
-              >
-                {`$$${segment.content}$$`}
-              </MathJaxSvg>
-            </View>
+            <Text key={index} style={styles.mathText}>
+              {'\n'}{segment.content}{'\n'}
+            </Text>
           );
         }
 
-        // inline-math
+        // inline-math — render in italic to distinguish from body text
         return (
-          <MathJaxSvg
-            key={index}
-            color={colors.textPrimary}
-            fontSize={resolvedFontSize}
-          >
-            {`$${segment.content}$`}
-          </MathJaxSvg>
+          <Text key={index} style={styles.mathText}>
+            {segment.content}
+          </Text>
         );
       })}
     </Text>
@@ -122,11 +111,8 @@ const styles = StyleSheet.create({
   wrapper: {
     includeFontPadding: false,
   },
-  text: {
+  mathText: {
+    fontStyle: 'italic',
     includeFontPadding: false,
-  },
-  blockMathWrapper: {
-    alignItems: 'center',
-    marginVertical: SPACING.sm,
   },
 });

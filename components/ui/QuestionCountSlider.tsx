@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Platform, LayoutChangeEvent } from 'react-nativ
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
-import { MotiView } from 'moti';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 
@@ -112,12 +111,6 @@ export function QuestionCountSlider({
     <View style={styles.container}>
       {/* Value display */}
       <View style={styles.valueRow}>
-        <MotiView
-          key={value}
-          from={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', damping: 15, stiffness: 200 }}
-        >
           <Text
             style={[
               styles.valueText,
@@ -126,7 +119,6 @@ export function QuestionCountSlider({
           >
             {value}
           </Text>
-        </MotiView>
         {showProBadge && (
           <View style={styles.proBadge}>
             <Text style={styles.proBadgeText}>PRO</Text>

@@ -14,7 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { MotiView } from 'moti';
+import { FadeInView } from '@/components/ui/FadeInView';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { MathRenderer } from '@/components/ui/MathRenderer';
@@ -238,11 +238,7 @@ const ExplanationPanel = React.memo(function ExplanationPanel({
   }, [questionId]);
 
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 20 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 400 }}
-    >
+    <FadeInView delay={0} duration={400}>
       <View style={[styles.explanationPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* Header */}
         <View style={styles.explanationHeader}>
@@ -286,7 +282,7 @@ const ExplanationPanel = React.memo(function ExplanationPanel({
           />
         )}
       </View>
-    </MotiView>
+    </FadeInView>
   );
 });
 

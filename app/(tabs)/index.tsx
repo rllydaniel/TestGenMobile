@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { MotiView } from 'moti';
+import { FadeInView } from '@/components/ui/FadeInView';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { SectionLabel } from '@/components/ui/Label';
@@ -293,11 +293,7 @@ export default function HomeScreen() {
         alwaysBounceVertical={false}
       >
         {/* ===== Greeting ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 0 }}
-        >
+        <FadeInView delay={0} duration={300}>
         <Text
           style={[
             styles.greetingText,
@@ -307,7 +303,7 @@ export default function HomeScreen() {
         >
           {greeting}, {profile?.username ?? 'Student'}.
         </Text>
-        </MotiView>
+        </FadeInView>
 
         {/* ===== Exam countdown pill ===== */}
         {examCountdown.visible && (
@@ -331,11 +327,7 @@ export default function HomeScreen() {
         )}
 
         {/* ===== TODAY'S FOCUS ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 100 }}
-        >
+        <FadeInView delay={100} duration={300}>
         <View style={{ marginBottom: SPACING.lg }}>
           <SectionLabel>TODAY'S FOCUS</SectionLabel>
           <Pressable
@@ -383,14 +375,10 @@ export default function HomeScreen() {
             </View>
           </Pressable>
         </View>
-        </MotiView>
+        </FadeInView>
 
         {/* ===== Stats 2x2 grid ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 200 }}
-        >
+        <FadeInView delay={200} duration={300}>
         <View style={{ marginBottom: SPACING.lg }}>
           <View style={styles.statsGrid}>
             <StatCard
@@ -428,14 +416,10 @@ export default function HomeScreen() {
             />
           </View>
         </View>
-        </MotiView>
+        </FadeInView>
 
         {/* ===== QUICK ACCESS ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 300 }}
-        >
+        <FadeInView delay={300} duration={300}>
         <View style={{ marginBottom: SPACING.lg }}>
           <SectionLabel>QUICK ACCESS</SectionLabel>
 
@@ -533,14 +517,10 @@ export default function HomeScreen() {
             />
           </Pressable>
         </View>
-        </MotiView>
+        </FadeInView>
 
         {/* ===== RECENT PERFORMANCE ===== */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 400 }}
-        >
+        <FadeInView delay={400} duration={300}>
         <View style={{ marginBottom: SPACING.lg }}>
           <SectionLabel>RECENT PERFORMANCE</SectionLabel>
           <Card padding="none" shadow="md">
@@ -694,7 +674,7 @@ export default function HomeScreen() {
             )}
           </Card>
         </View>
-        </MotiView>
+        </FadeInView>
       </ScrollView>
     </View>
   );

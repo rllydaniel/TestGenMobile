@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MotiView } from 'moti';
+import { FadeInView } from '@/components/ui/FadeInView';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/Label';
@@ -72,11 +72,7 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300 }}
-        >
+        <FadeInView delay={0} duration={300}>
           <View style={styles.profileHeader}>
             {user?.user_metadata?.avatar_url ? (
               <Image
@@ -103,14 +99,10 @@ export default function ProfileScreen() {
               <Text style={[styles.userEmail, { color: colors.textMuted }]}>{user?.email ?? ''}</Text>
             </View>
           </View>
-        </MotiView>
+        </FadeInView>
 
         {/* Stats Row */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 100 }}
-        >
+        <FadeInView delay={100} duration={300}>
           <View style={{ marginBottom: SPACING.lg }}>
             <Card shadow="md">
               <View style={styles.statsRow}>
@@ -141,14 +133,10 @@ export default function ProfileScreen() {
               </View>
             </Card>
           </View>
-        </MotiView>
+        </FadeInView>
 
         {/* Menu Items */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300, delay: 200 }}
-        >
+        <FadeInView delay={200} duration={300}>
           <View style={{ marginBottom: SPACING.lg }}>
             <SectionLabel>ACCOUNT</SectionLabel>
             <View style={{ gap: SPACING.sm }}>
@@ -199,7 +187,7 @@ export default function ProfileScreen() {
               />
             }
           />
-        </MotiView>
+        </FadeInView>
       </ScrollView>
     </View>
   );

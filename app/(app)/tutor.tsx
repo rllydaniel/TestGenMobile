@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MotiView } from 'moti';
+import { FadeInView } from '@/components/ui/FadeInView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
 import { Button } from '@/components/ui/Button';
@@ -81,11 +81,7 @@ const TypingIndicator = React.memo(function TypingIndicator() {
   }, [dot1, dot2, dot3]);
 
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 8 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 200 }}
-    >
+    <FadeInView delay={0} duration={200}>
       <View style={s.typingRow}>
         <View style={[s.aiBubble, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.aiLabelRow}>
@@ -102,7 +98,7 @@ const TypingIndicator = React.memo(function TypingIndicator() {
           </View>
         </View>
       </View>
-    </MotiView>
+    </FadeInView>
   );
 });
 
@@ -119,11 +115,7 @@ const MessageItem = React.memo(function MessageItem({ item }: { item: Message })
   const isAI = item.role === 'ai';
 
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 12 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 300 }}
-    >
+    <FadeInView delay={0} duration={300}>
       <View style={[s.messageRow, isAI ? s.messageRowLeft : s.messageRowRight]}>
         <View style={isAI
           ? [s.aiBubble, { backgroundColor: colors.surface, borderColor: colors.border }]
@@ -149,7 +141,7 @@ const MessageItem = React.memo(function MessageItem({ item }: { item: Message })
           </Text>
         </View>
       </View>
-    </MotiView>
+    </FadeInView>
   );
 });
 
@@ -289,11 +281,7 @@ export default function TutorScreen({ systemContext, subject }: TutorScreenProps
 
   const renderEmptyState = () => (
     <View style={s.emptyStateContainer}>
-      <MotiView
-        from={{ opacity: 0, translateY: 16 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 400 }}
-      >
+      <FadeInView delay={0} duration={400}>
         <View style={s.emptyStateContent}>
           <Ionicons name="sparkles" size={48} color={colors.primary} style={{ opacity: 0.6 }} />
           <Text
@@ -336,7 +324,7 @@ export default function TutorScreen({ systemContext, subject }: TutorScreenProps
             ))}
           </View>
         </View>
-      </MotiView>
+      </FadeInView>
     </View>
   );
 
