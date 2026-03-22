@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LogoMark } from '@/components/ui/LogoMark';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -65,9 +66,7 @@ export default function SignUpScreen() {
         >
           {/* Logo */}
           <View style={{ alignItems: 'center', marginBottom: SPACING.xxl }}>
-            <View style={[styles.logoCircle, { backgroundColor: colors.primary }]}>
-              <Ionicons name="school" size={24} color={colors.textOnPrimary} />
-            </View>
+            <LogoMark size={64} />
           </View>
 
           {/* Heading */}

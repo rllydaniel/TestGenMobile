@@ -10,8 +10,8 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="generate" />
-      <Tabs.Screen name="study" />
-      <Tabs.Screen name="history" />
+      <Tabs.Screen name="plan" />
+      <Tabs.Screen name="library" />
       <Tabs.Screen name="profile" />
     </Tabs>
   );

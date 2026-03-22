@@ -42,9 +42,15 @@ export default function ProfileScreen() {
       onPress: () => router.push('/(app)/achievements'),
     },
     {
+      icon: 'time' as const,
+      title: 'Test History',
+      color: colors.primary,
+      onPress: () => router.push('/(app)/history'),
+    },
+    {
       icon: 'podium' as const,
       title: 'Leaderboard',
-      color: colors.primary,
+      color: colors.levelAdvanced,
       onPress: () => router.push('/(app)/leaderboard'),
     },
     {

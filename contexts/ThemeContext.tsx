@@ -37,6 +37,30 @@ const LIGHT_COLORS = {
   tabBar: '#FFFFFF',
   tabBarBorder: 'rgba(0,0,0,0.08)',
   shimmer: ['#F0EDE9', '#E8E4DF', '#F0EDE9'],
+
+  // Diagnostic levels
+  levelBeginner: '#F59E0B',
+  levelBeginnerLight: 'rgba(245,158,11,0.12)',
+  levelIntermediate: '#2360E8',
+  levelIntermediateLight: '#EEF3FD',
+  levelAdvanced: '#22C55E',
+  levelAdvancedLight: 'rgba(34,197,94,0.12)',
+
+  // Plan session types
+  sessionStudyGuide: '#2360E8',
+  sessionTopicReview: '#D97706',
+  sessionFlashcards: '#7C3AED',
+  sessionPracticeTest: '#16A34A',
+  sessionRest: '#6B7280',
+
+  // Category colors
+  categoryStandardized: '#2360E8',
+  categoryAP: '#7C3AED',
+  categoryMath: '#059669',
+  categoryScience: '#DC2626',
+  categoryHumanities: '#D97706',
+  categoryLanguages: '#0891B2',
+  categoryCustom: '#6B7280',
 };
 
 const DARK_COLORS: typeof LIGHT_COLORS = {
@@ -70,6 +94,30 @@ const DARK_COLORS: typeof LIGHT_COLORS = {
   tabBar: '#1C1A17',
   tabBarBorder: 'rgba(255,255,255,0.08)',
   shimmer: ['#1C1A17', '#252220', '#1C1A17'],
+
+  // Diagnostic levels
+  levelBeginner: '#FBBF24',
+  levelBeginnerLight: 'rgba(251,191,36,0.12)',
+  levelIntermediate: '#4A7AF4',
+  levelIntermediateLight: 'rgba(74,122,244,0.15)',
+  levelAdvanced: '#34D399',
+  levelAdvancedLight: 'rgba(52,211,153,0.12)',
+
+  // Plan session types
+  sessionStudyGuide: '#4A7AF4',
+  sessionTopicReview: '#F59E0B',
+  sessionFlashcards: '#A78BFA',
+  sessionPracticeTest: '#34D399',
+  sessionRest: '#9CA3AF',
+
+  // Category colors
+  categoryStandardized: '#4A7AF4',
+  categoryAP: '#A78BFA',
+  categoryMath: '#34D399',
+  categoryScience: '#F87171',
+  categoryHumanities: '#FBBF24',
+  categoryLanguages: '#38BDF8',
+  categoryCustom: '#9CA3AF',
 };
 
 export type ThemeColors = typeof LIGHT_COLORS;

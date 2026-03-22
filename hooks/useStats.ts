@@ -16,25 +16,30 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['stats'],
     queryFn: async () => {
-      const { data: tests, error } = await supabase
-        .from('test_history')
-        .select('score, total_questions, subject, topics, created_at')
+      const { data: sessions, error } = await supabase
+        .from('test_sessions')
+        .select('score, question_count, subject, config, time_spent, completed_at')
         .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false });
 
       if (error) throw error;
 
-      const totalTests = tests?.length ?? 0;
+      const totalTests = sessions?.length ?? 0;
       const avgScore =
         totalTests > 0
-          ? tests!.reduce((sum, t) => sum + (t.score / t.total_questions) * 100, 0) / totalTests
+          ? Math.round(
+              sessions!.reduce((sum, t) => sum + (t.score ?? 0), 0) / totalTests,
+            )
           : 0;
+
+      const totalStudySeconds = sessions?.reduce((sum, t) => sum + (t.time_spent ?? 0), 0) ?? 0;
 
       return {
         testsCompleted: totalTests,
-        averageScore: Math.round(avgScore),
+        averageScore: avgScore,
         currentStreak: 0,
-        studyTimeMinutes: 0,
+        studyTimeMinutes: Math.round(totalStudySeconds / 60),
         weakTopics: [],
       } as DashboardStats;
     },
@@ -48,13 +53,37 @@ export function useStreak() {
   return useQuery({
     queryKey: ['streak'],
     queryFn: async () => {
+      // Derive streak from completed test_sessions
       const { data, error } = await supabase
-        .from('streaks')
-        .select('*')
+        .from('test_sessions')
+        .select('completed_at')
         .eq('user_id', user!.id)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
-      return data ?? { current_streak: 0, longest_streak: 0 };
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) return { current_streak: 0, longest_streak: 0 };
+
+      // Calculate streak: consecutive days with at least one completed test
+      const daySet = new Set(
+        data.map((r) => {
+          const d = new Date(r.completed_at);
+          return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        }),
+      );
+
+      let streak = 0;
+      const today = new Date();
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (daySet.has(key)) streak++;
+        else break;
+      }
+
+      return { current_streak: streak, longest_streak: streak };
     },
     enabled: !!user,
   });

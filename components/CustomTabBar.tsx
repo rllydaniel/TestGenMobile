@@ -1,86 +1,265 @@
-import React, { useCallback } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { View, Text, Pressable, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { FONTS, FONT_SIZES, SHADOWS } from '@/constants/theme';
+import { FONTS, FONT_SIZES, RADIUS, SHADOWS } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const TAB_CONFIG = [
-  { name: 'index', label: 'Home', icon: 'home' as const, iconOutline: 'home-outline' as const },
-  { name: 'generate', label: 'Create', icon: 'add-circle' as const, iconOutline: 'add-circle-outline' as const },
-  { name: 'study', label: 'Study', icon: 'flash' as const, iconOutline: 'flash-outline' as const },
-  { name: 'history', label: 'History', icon: 'time' as const, iconOutline: 'time-outline' as const },
-  { name: 'profile', label: 'Profile', icon: 'person' as const, iconOutline: 'person-outline' as const },
+const TABS = [
+  { name: 'index',    label: 'Home',    icon: 'home'         as const, iconOutline: 'home-outline'         as const },
+  { name: 'generate', label: 'Create',  icon: 'add-circle'   as const, iconOutline: 'add-circle-outline'   as const },
+  { name: 'plan',     label: 'Plan',    icon: 'locate'       as const, iconOutline: 'locate-outline'       as const },
+  { name: 'library',  label: 'Library', icon: 'book'         as const, iconOutline: 'book-outline'         as const },
+  { name: 'profile',  label: 'Profile', icon: 'person'       as const, iconOutline: 'person-outline'       as const },
 ];
 
-export function CustomTabBar({ state, descriptors, navigation }: any) {
+const TAB_BAR_HEIGHT = 56;
+
+function RegularTabItem({
+  tab,
+  isFocused,
+  onPress,
+  colors,
+}: {
+  tab: (typeof TABS)[number];
+  isFocused: boolean;
+  onPress: () => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.88,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 3,
+    }).start();
+  };
+
+  const activeColor = colors.primary;
+  const inactiveColor = colors.textFaint;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 44,
+      }}
+    >
+      {/* Active top-border indicator */}
+      {isFocused && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            width: 24,
+            height: 2,
+            borderRadius: 1,
+            backgroundColor: activeColor,
+          }}
+        />
+      )}
+
+      <Animated.View
+        style={{
+          alignItems: 'center',
+          gap: 3,
+          transform: [{ scale: scaleAnim }],
+        }}
+      >
+        <Ionicons
+          name={isFocused ? tab.icon : tab.iconOutline}
+          size={22}
+          color={isFocused ? activeColor : inactiveColor}
+        />
+        <Text
+          style={{
+            fontSize: FONT_SIZES.xs - 1,
+            fontFamily: isFocused ? FONTS.sansSemiBold : FONTS.sansRegular,
+            color: isFocused ? activeColor : inactiveColor,
+            lineHeight: (FONT_SIZES.xs - 1) * 1.4,
+          }}
+          numberOfLines={1}
+        >
+          {tab.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function CreateTabItem({
+  isFocused,
+  onPress,
+  colors,
+}: {
+  isFocused: boolean;
+  onPress: () => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.93,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 3,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: -28,
+      }}
+    >
+      <Animated.View
+        style={{
+          alignItems: 'center',
+          transform: [{ scale: scaleAnim }],
+        }}
+      >
+        {/* Outer glow ring */}
+        <View
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: RADIUS.full,
+            backgroundColor: `${colors.primary}20`,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {/* Main button */}
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: RADIUS.full,
+              backgroundColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...SHADOWS.primary,
+            }}
+          >
+            <Ionicons name="add" size={28} color="#FFFFFF" />
+          </View>
+        </View>
+        <Text
+          style={{
+            fontFamily: FONTS.sansMedium,
+            fontSize: 10,
+            color: isFocused ? colors.primary : colors.textMuted,
+            marginTop: 2,
+            lineHeight: 10 * 1.4,
+          }}
+          numberOfLines={1}
+        >
+          Create
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+export function CustomTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+
+  const handlePress = useCallback(
+    (route: any, isFocused: boolean) => {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: route.key,
+        canPreventDefault: true,
+      });
+      if (!isFocused && !event.defaultPrevented) {
+        navigation.navigate(route.name);
+      }
+    },
+    [navigation],
+  );
 
   return (
     <View
       style={{
-        flexDirection: 'row',
-        backgroundColor: colors.tabBar,
+        backgroundColor: colors.surface,
         borderTopWidth: 1,
-        borderTopColor: colors.tabBarBorder,
-        paddingBottom: insets.bottom || 8,
-        paddingTop: 8,
-        height: 56 + (insets.bottom || 8),
-        ...SHADOWS.sm,
+        borderTopColor: colors.border,
+        paddingBottom: insets.bottom || 0,
+        height: TAB_BAR_HEIGHT + (insets.bottom || 0),
       }}
     >
-      {state.routes.map((route: any, index: number) => {
-        const isFocused = state.index === index;
-        const tab = TAB_CONFIG[index];
-        if (!tab) return null;
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          height: TAB_BAR_HEIGHT,
+        }}
+      >
+        {state.routes.map((route: any, index: number) => {
+          const tabConfig = TABS.find((t) => t.name === route.name);
+          if (!tabConfig) return null;
+          const isFocused = state.index === index;
+          const isCreate = tabConfig.name === 'generate';
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-
-          if (!isFocused && !event.defaultPrevented) {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            navigation.navigate(route.name);
+          if (isCreate) {
+            return (
+              <CreateTabItem
+                key={route.key}
+                isFocused={isFocused}
+                onPress={() => handlePress(route, isFocused)}
+                colors={colors}
+              />
+            );
           }
-        };
 
-        return (
-          <Pressable
-            key={route.key}
-            onPress={onPress}
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              minHeight: 44,
-            }}
-          >
-            <Ionicons
-              name={isFocused ? tab.icon : tab.iconOutline}
-              size={tab.name === 'generate' ? 28 : 22}
-              color={isFocused ? colors.primary : colors.textFaint}
+          return (
+            <RegularTabItem
+              key={route.key}
+              tab={tabConfig}
+              isFocused={isFocused}
+              onPress={() => handlePress(route, isFocused)}
+              colors={colors}
             />
-            <Text
-              style={{
-                fontSize: FONT_SIZES.xs,
-                fontFamily: isFocused ? FONTS.sansMedium : FONTS.sansRegular,
-                color: isFocused ? colors.primary : colors.textFaint,
-                lineHeight: FONT_SIZES.xs * 1.5,
-              }}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+          );
+        })}
+      </View>
     </View>
   );
 }

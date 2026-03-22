@@ -43,6 +43,30 @@ export const COLORS = {
   // Tab bar
   tabBar: '#FFFFFF',
   tabBarBorder: 'rgba(0,0,0,0.08)',
+
+  // Diagnostic levels
+  levelBeginner: '#F59E0B',
+  levelBeginnerLight: 'rgba(245,158,11,0.12)',
+  levelIntermediate: '#2360E8',
+  levelIntermediateLight: '#EEF3FD',
+  levelAdvanced: '#22C55E',
+  levelAdvancedLight: 'rgba(34,197,94,0.12)',
+
+  // Plan session types
+  sessionStudyGuide: '#2360E8',
+  sessionTopicReview: '#D97706',
+  sessionFlashcards: '#7C3AED',
+  sessionPracticeTest: '#16A34A',
+  sessionRest: '#6B7280',
+
+  // Category colors
+  categoryStandardized: '#2360E8',
+  categoryAP: '#7C3AED',
+  categoryMath: '#059669',
+  categoryScience: '#DC2626',
+  categoryHumanities: '#D97706',
+  categoryLanguages: '#0891B2',
+  categoryCustom: '#6B7280',
 };
 
 export const FONTS = {

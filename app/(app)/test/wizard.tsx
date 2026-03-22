@@ -113,14 +113,20 @@ export default function TestWizardScreen() {
   function handleStartTest() {
     hapticFeedback();
     router.push({
-      pathname: '/(app)/test/[id]',
+      pathname: '/(app)/test/generating',
       params: {
-        id: 'new',
-        subjectId: selectedSubjectId ?? '',
-        topics: selectedTopics.join(','),
-        count: String(questionCount),
-        type: questionType,
+        subject: selectedSubject?.name ?? selectedSubjectId ?? 'General',
+        topics: JSON.stringify(
+          selectedTopics.length > 0
+            ? selectedTopics
+            : (selectedSubject?.topics.slice(0, 3).map((t) => t.name) ?? [selectedSubject?.name ?? 'General']),
+        ),
+        questionCount: String(questionCount),
+        questionType,
         difficulty,
+        studyMode: 'false',
+        timerEnabled: 'false',
+        timerMinutes: '10',
       },
     });
   }
@@ -444,7 +450,7 @@ export default function TestWizardScreen() {
           {summaryText}
         </Text>
         <Button
-          label="Start Test →"
+          label="Generate Test →"
           onPress={handleStartTest}
           size="lg"
           style={{ width: '100%' } as any}

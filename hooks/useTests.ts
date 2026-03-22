@@ -9,11 +9,22 @@ export function useTestHistory() {
     queryKey: ['tests'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('test_history')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from('test_sessions')
+        .select('id, subject, difficulty, score, question_count, study_mode, created_at, completed_at, config, questions')
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false });
       if (error) throw error;
-      return data as TestHistoryItem[];
+      // Map test_sessions shape to TestHistoryItem
+      return (data ?? []).map((row: any) => ({
+        id: row.id,
+        subject: row.subject,
+        topics: (row.config?.topics as string[]) ?? [],
+        score: row.score ?? 0,
+        totalQuestions: row.question_count,
+        questionType: (row.config?.questionTypes as string[])?.[0] ?? 'multiple-choice',
+        difficulty: row.difficulty,
+        completedAt: row.completed_at ?? row.created_at,
+      })) as TestHistoryItem[];
     },
   });
 }

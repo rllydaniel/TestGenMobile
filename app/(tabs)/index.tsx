@@ -20,6 +20,7 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useDashboardStats, useStreak } from '@/hooks/useStats';
 import { useProfile } from '@/hooks/useProfile';
 import { useTestHistory } from '@/hooks/useTests';
+import { useStudyPlan, usePlanSessions } from '@/hooks/usePlan';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
   FONTS,
@@ -222,6 +223,8 @@ export default function HomeScreen() {
   const { data: streak, isLoading: streakLoading } = useStreak();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: tests, isLoading: testsLoading } = useTestHistory();
+  const { data: activePlan } = useStudyPlan();
+  const { data: planSessions = [] } = usePlanSessions(activePlan?.id ?? null);
 
   const isLoading = statsLoading || streakLoading || profileLoading || testsLoading;
 
@@ -266,11 +269,11 @@ export default function HomeScreen() {
   }, [router]);
 
   const handleFlashcards = useCallback(() => {
-    router.push('/(tabs)/study');
+    router.push('/(tabs)/library');
   }, [router]);
 
   const handleViewAllResults = useCallback(() => {
-    router.push('/(tabs)/history');
+    router.push('/(app)/history');
   }, [router]);
 
   const handleTestPress = useCallback(
@@ -296,7 +299,7 @@ export default function HomeScreen() {
         contentContainerStyle={{
           paddingTop: insets.top + SPACING.lg,
           paddingHorizontal: SPACING.screenH,
-          paddingBottom: 80 + insets.bottom + SPACING.xl,
+          paddingBottom: 100 + insets.bottom + SPACING.xl,
         }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
@@ -530,6 +533,59 @@ export default function HomeScreen() {
         </View>
         </FadeInView>
 
+        {/* ===== PLAN PROGRESS WIDGET ===== */}
+        {activePlan && (
+          <FadeInView delay={350} duration={300}>
+          <View style={{ marginBottom: SPACING.lg }}>
+            <SectionLabel>STUDY PLAN</SectionLabel>
+            <Pressable
+              onPress={() => router.push('/(app)/plan/view')}
+              onPressIn={haptic}
+              style={({ pressed }) => [
+                styles.planWidget,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  ...SHADOWS.sm,
+                },
+              ]}
+            >
+              <View style={[styles.planWidgetAccent, { backgroundColor: colors.primary }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.planWidgetSubject, { color: colors.primary }]} numberOfLines={1}>
+                  {activePlan.subject}
+                </Text>
+                <Text style={[styles.planWidgetExam, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {activePlan.targetExam}
+                </Text>
+                <View style={{ marginTop: 8 }}>
+                  <View style={[styles.planProgressTrack, { backgroundColor: colors.border }]}>
+                    {(() => {
+                      const total = planSessions.filter((s) => !s.isRestDay && s.sessionType !== 'rest').length;
+                      const done = planSessions.filter((s) => s.status === 'completed').length;
+                      const pct = total > 0 ? (done / total) * 100 : 0;
+                      return (
+                        <View style={[styles.planProgressFill, { width: `${pct}%`, backgroundColor: colors.primary }]} />
+                      );
+                    })()}
+                  </View>
+                  <Text style={[styles.planProgressLabel, { color: colors.textMuted }]}>
+                    {planSessions.filter((s) => s.status === 'completed').length}/
+                    {planSessions.filter((s) => !s.isRestDay && s.sessionType !== 'rest').length} sessions complete
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.planWidgetCta}>
+                <Text style={[styles.planWidgetCtaText, { color: colors.primary }]}>View Plan</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </View>
+            </Pressable>
+          </View>
+          </FadeInView>
+        )}
+
         {/* ===== RECENT PERFORMANCE ===== */}
         <FadeInView delay={400} duration={300}>
         <View style={{ marginBottom: SPACING.lg }}>
@@ -687,6 +743,39 @@ export default function HomeScreen() {
         </View>
         </FadeInView>
       </ScrollView>
+
+      {/* Floating Action Button — New Test */}
+      <Pressable
+        onPress={handleCreateTest}
+        onPressIn={haptic}
+        style={({ pressed }) => ({
+          position: 'absolute',
+          bottom: 24 + (insets.bottom || 0),
+          right: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          backgroundColor: colors.primary,
+          borderRadius: RADIUS.full,
+          paddingHorizontal: 20,
+          paddingVertical: 14,
+          opacity: pressed ? 0.88 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+          ...SHADOWS.primary,
+        })}
+      >
+        <Ionicons name="add" size={18} color="#FFFFFF" />
+        <Text
+          style={{
+            fontFamily: FONTS.sansSemiBold,
+            fontSize: FONT_SIZES.sm,
+            color: '#FFFFFF',
+            lineHeight: FONT_SIZES.sm * 1.5,
+          }}
+        >
+          New Test
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -930,6 +1019,63 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     fontFamily: FONTS.sansBold,
     textAlign: 'center',
+    lineHeight: FONT_SIZES.sm * 1.5,
+  },
+
+  /* plan widget */
+  planWidget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    padding: SPACING.md,
+    gap: SPACING.md,
+    overflow: 'hidden',
+  },
+  planWidgetAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    borderRadius: 0,
+  },
+  planWidgetSubject: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 0.5,
+    lineHeight: FONT_SIZES.xs * 1.5,
+  },
+  planWidgetExam: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONTS.sansSemiBold,
+    lineHeight: FONT_SIZES.base * 1.4,
+    marginTop: 2,
+  },
+  planProgressTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  planProgressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+  planProgressLabel: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: FONTS.sansRegular,
+    lineHeight: FONT_SIZES.xs * 1.5,
+  },
+  planWidgetCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 0,
+  },
+  planWidgetCtaText: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.sansSemiBold,
     lineHeight: FONT_SIZES.sm * 1.5,
   },
 

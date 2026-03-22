@@ -61,6 +61,7 @@ export default function ConfigScreen() {
   const [timedMode, setTimedMode] = useState(false);
   const [timeLimit, setTimeLimit] = useState(15);
   const [studyMode, setStudyMode] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const resolvedSubject = isCustom ? customSubject.trim() : (subjectParam ?? '');
@@ -104,6 +105,7 @@ export default function ConfigScreen() {
         questionTypes: resolveQuestionTypes(questionType),
         timeLimit: timedMode ? timeLimit * 60 : null,
         studyMode,
+        focusMode,
         topics: selectedTopics.length > 0 ? selectedTopics : undefined,
       });
 
@@ -433,8 +435,8 @@ export default function ConfigScreen() {
             style={[
               styles.toggleRow,
               {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
+                backgroundColor: studyMode ? `${colors.primary}10` : colors.surface,
+                borderColor: studyMode ? `${colors.primary}40` : colors.border,
               },
               SHADOWS.md,
             ]}
@@ -445,13 +447,13 @@ export default function ConfigScreen() {
                 style={[styles.toggleLabel, { color: colors.textPrimary }]}
                 numberOfLines={1}
               >
-                Study Mode
+                Show Explanations
               </Text>
               <Text
                 style={[styles.toggleDescription, { color: colors.textMuted }]}
                 numberOfLines={1}
               >
-                Show AI explanations after each question
+                Best for learning new material
               </Text>
             </View>
             <Switch
@@ -459,6 +461,45 @@ export default function ConfigScreen() {
               onValueChange={(val) => {
                 hapticFeedback();
                 setStudyMode(val);
+              }}
+              trackColor={{ false: colors.surfaceSecondary, true: colors.primary }}
+              thumbColor={colors.textOnPrimary}
+            />
+          </View>
+        </View>
+
+        {/* Exam Focus mode */}
+        <View style={styles.section}>
+          <View
+            style={[
+              styles.toggleRow,
+              {
+                backgroundColor: focusMode ? `${colors.primary}10` : colors.surface,
+                borderColor: focusMode ? `${colors.primary}40` : colors.border,
+              },
+              SHADOWS.md,
+            ]}
+          >
+            <Ionicons name="eye-off-outline" size={20} color={colors.textPrimary} />
+            <View style={styles.toggleText}>
+              <Text
+                style={[styles.toggleLabel, { color: colors.textPrimary }]}
+                numberOfLines={1}
+              >
+                Exam Focus Mode
+              </Text>
+              <Text
+                style={[styles.toggleDescription, { color: colors.textMuted }]}
+                numberOfLines={1}
+              >
+                No hints or feedback — pure simulation
+              </Text>
+            </View>
+            <Switch
+              value={focusMode}
+              onValueChange={(val) => {
+                hapticFeedback();
+                setFocusMode(val);
               }}
               trackColor={{ false: colors.surfaceSecondary, true: colors.primary }}
               thumbColor={colors.textOnPrimary}

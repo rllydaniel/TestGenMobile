@@ -34,6 +34,7 @@ export interface TestResult {
   correctCount: number;
   completedAt: string;
   timeTaken?: number;
+  aiSummary?: string;
 }
 
 export interface TestHistoryItem {

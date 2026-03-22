@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,60 +10,81 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInView } from '@/components/ui/FadeInView';
-import { subjects, Subject } from '@/lib/subjects';
-import { Input } from '@/components/ui/Input';
-import { SectionLabel } from '@/components/ui/Label';
-import { Card } from '@/components/ui/Card';
+import { subjects } from '@/lib/subjects';
 import { useTheme } from '@/contexts/ThemeContext';
-import {
-  FONTS,
-  FONT_SIZES,
-  RADIUS,
-  SPACING,
-  SHADOWS,
-} from '@/constants/theme';
+import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 
-const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
-  school: 'school',
-  leaf: 'leaf',
-  flask: 'flask',
-  atom: 'nuclear',
-  flag: 'flag',
-  globe: 'globe',
-  brain: 'bulb',
-  book: 'book',
-  calculator: 'calculator',
-  shapes: 'shapes',
-  'bar-chart': 'bar-chart',
-  code: 'code',
-  language: 'language',
-  'trending-up': 'trending-up',
-};
+/* ------------------------------------------------------------------ */
+/*  Categories                                                         */
+/* ------------------------------------------------------------------ */
+
+interface Category {
+  key: string;
+  label: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  colorKey: 'categoryStandardized' | 'categoryAP' | 'categoryMath' | 'categoryScience' | 'categoryHumanities' | 'categoryLanguages' | 'categoryCustom';
+  filter: (id: string) => boolean;
+}
+
+const CATEGORIES: Category[] = [
+  {
+    key: 'standardized',
+    label: 'Standardized Tests',
+    description: 'SAT, ACT, and other college admissions tests',
+    icon: 'school-outline',
+    colorKey: 'categoryStandardized',
+    filter: (id) => id === 'sat' || id === 'act',
+  },
+  {
+    key: 'ap',
+    label: 'AP Exams',
+    description: 'Advanced Placement college-level courses',
+    icon: 'ribbon-outline',
+    colorKey: 'categoryAP',
+    filter: (id) => id.startsWith('ap-'),
+  },
+  {
+    key: 'math',
+    label: 'Mathematics',
+    description: 'Algebra, calculus, statistics, and more',
+    icon: 'calculator-outline',
+    colorKey: 'categoryMath',
+    filter: (id) => ['math', 'algebra', 'calculus', 'statistics', 'geometry'].some((k) => id.includes(k)),
+  },
+  {
+    key: 'science',
+    label: 'Sciences',
+    description: 'Biology, chemistry, physics, and more',
+    icon: 'flask-outline',
+    colorKey: 'categoryScience',
+    filter: (id) => ['biology', 'chemistry', 'physics', 'science'].some((k) => id.includes(k)),
+  },
+  {
+    key: 'humanities',
+    label: 'Humanities',
+    description: 'History, literature, philosophy, and more',
+    icon: 'book-outline',
+    colorKey: 'categoryHumanities',
+    filter: (id) => ['history', 'english', 'literature', 'psychology'].some((k) => id.includes(k)),
+  },
+  {
+    key: 'languages',
+    label: 'Languages',
+    description: 'Spanish, French, Latin, and other languages',
+    icon: 'chatbubble-outline',
+    colorKey: 'categoryLanguages',
+    filter: (id) => ['spanish', 'french', 'latin', 'language'].some((k) => id.includes(k)),
+  },
+];
 
 export default function GenerateScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredSubjects = subjects.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  const standardizedTests = filteredSubjects.filter(
-    (s) => s.id === 'sat' || s.id === 'act',
-  );
-  const apSubjects = filteredSubjects.filter((s) => s.id.startsWith('ap-'));
-  const coreSubjects = filteredSubjects.filter(
-    (s) => !s.id.startsWith('ap-') && s.id !== 'sat' && s.id !== 'act',
-  );
-
-  const handleSelectSubject = (subject: Subject) => {
-    router.push({
-      pathname: '/(app)/test/wizard',
-      params: { subjectId: subject.id },
-    });
-  };
+  const getCategoryCount = (filter: (id: string) => boolean) =>
+    subjects.filter((s) => filter(s.id)).length;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
@@ -75,204 +96,149 @@ export default function GenerateScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Title */}
-        <FadeInView delay={0} duration={300}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Build Your Practice Test</Text>
+        {/* Header */}
+        <FadeInView delay={0} duration={350}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Create Test</Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Customize your session — then start when you're ready.
+            What are you studying for?
           </Text>
-
-          {/* Upload button */}
-          <Pressable
-            onPress={() => router.push('/(app)/upload')}
-            style={({ pressed }) => [
-              styles.uploadButton,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Ionicons
-              name="cloud-upload-outline"
-              size={18}
-              color={colors.textPrimary}
-            />
-            <Text style={[styles.uploadButtonText, { color: colors.textPrimary }]}>Upload Notes Instead</Text>
-          </Pressable>
         </FadeInView>
 
-        {/* Search */}
-        <FadeInView delay={100} duration={300}>
-          <View style={{ marginBottom: SPACING.lg }}>
-            <Input
-              placeholder="e.g., AP Physics I, SAT Math..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              icon={
-                <Ionicons name="book" size={18} color={colors.textMuted} />
+        {/* Category cards */}
+        <FadeInView delay={80} duration={350}>
+          <View style={{ gap: SPACING.sm }}>
+            {CATEGORIES.map((cat) => {
+              const count = getCategoryCount(cat.filter);
+              if (count === 0) return null;
+              const catColor = colors[cat.colorKey] as string;
+              return (
+                <Pressable
+                  key={cat.key}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(app)/create/subjects',
+                      params: {
+                        category: cat.key,
+                        categoryLabel: cat.label,
+                        categoryFilter: JSON.stringify(
+                          subjects.filter((s) => cat.filter(s.id)).map((s) => s.id),
+                        ),
+                      },
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.catCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                      opacity: pressed ? 0.88 : 1,
+                    },
+                  ]}
+                >
+                  {/* Icon box */}
+                  <View style={[styles.catIconBox, { backgroundColor: catColor + '18' }]}>
+                    <Ionicons name={cat.icon} size={24} color={catColor} />
+                  </View>
+
+                  {/* Label + description */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.catLabel, { color: colors.textPrimary }]}>{cat.label}</Text>
+                    <Text style={[styles.catDesc, { color: colors.textMuted }]} numberOfLines={1}>
+                      {cat.description}
+                    </Text>
+                  </View>
+
+                  {/* Count + chevron */}
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <Text style={[styles.catCount, { color: colors.textFaint }]}>{count}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+                  </View>
+                </Pressable>
+              );
+            })}
+
+            {/* Custom option — skip to config */}
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/test/wizard',
+                  params: { subjectId: '' },
+                })
               }
-            />
+              style={({ pressed }) => [
+                styles.catCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                  opacity: pressed ? 0.88 : 1,
+                },
+              ]}
+            >
+              <View style={[styles.catIconBox, { backgroundColor: colors.surfaceSecondary }]}>
+                <Ionicons name="add-circle-outline" size={24} color={colors.textMuted} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.catLabel, { color: colors.textPrimary }]}>Custom</Text>
+                <Text style={[styles.catDesc, { color: colors.textMuted }]} numberOfLines={1}>
+                  Enter any subject or topic
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+            </Pressable>
           </View>
-        </FadeInView>
-
-        {/* Subject sections */}
-        <FadeInView delay={200} duration={300}>
-          {standardizedTests.length > 0 && (
-            <View style={{ marginBottom: SPACING.lg }}>
-              <SubjectSection
-                title="Standardized Tests"
-                subjects={standardizedTests}
-                onSelect={handleSelectSubject}
-              />
-            </View>
-          )}
-          {apSubjects.length > 0 && (
-            <View style={{ marginBottom: SPACING.lg }}>
-              <SubjectSection
-                title="AP Subjects"
-                subjects={apSubjects}
-                onSelect={handleSelectSubject}
-              />
-            </View>
-          )}
-          {coreSubjects.length > 0 && (
-            <View style={{ marginBottom: SPACING.lg }}>
-              <SubjectSection
-                title="Core Subjects"
-                subjects={coreSubjects}
-                onSelect={handleSelectSubject}
-              />
-            </View>
-          )}
         </FadeInView>
       </ScrollView>
     </View>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Subject Section                                                    */
-/* ------------------------------------------------------------------ */
-
-function SubjectSection({
-  title,
-  subjects: subjectList,
-  onSelect,
-}: {
-  title: string;
-  subjects: Subject[];
-  onSelect: (s: Subject) => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <View>
-      <SectionLabel>{title.toUpperCase()}</SectionLabel>
-      <View style={{ gap: SPACING.sm }}>
-        {subjectList.map((subject) => (
-          <Pressable
-            key={subject.id}
-            onPress={() => onSelect(subject)}
-            style={({ pressed }) => [
-              styles.subjectCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.subjectIconCircle,
-                { backgroundColor: subject.color + '20' },
-              ]}
-            >
-              <Ionicons
-                name={iconMap[subject.icon] ?? 'book'}
-                size={22}
-                color={subject.color}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.subjectName, { color: colors.textPrimary }]}>{subject.name}</Text>
-              <Text style={[styles.subjectTopicCount, { color: colors.textMuted }]}>
-                {subject.topics.length} topics
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.textMuted}
-            />
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Styles                                                             */
-/* ------------------------------------------------------------------ */
-
 const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.xxl,
     fontFamily: FONTS.displaySemiBold,
     lineHeight: FONT_SIZES.xxl * 1.2,
+    includeFontPadding: false,
   },
   subtitle: {
+    fontSize: FONT_SIZES.base,
     fontFamily: FONTS.sansRegular,
-    fontSize: FONT_SIZES.sm,
     marginTop: SPACING.xs,
     marginBottom: SPACING.lg,
-    lineHeight: FONT_SIZES.sm * 1.6,
+    lineHeight: FONT_SIZES.base * 1.6,
   },
-  uploadButton: {
+  catCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
-    gap: SPACING.sm,
+    gap: SPACING.md,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    alignSelf: 'flex-start',
-    marginBottom: SPACING.lg,
-    minHeight: 44,
+    padding: SPACING.md,
+    minHeight: 72,
     ...SHADOWS.sm,
   },
-  uploadButtonText: {
-    fontSize: FONT_SIZES.sm,
-    fontFamily: FONTS.sansMedium,
-    lineHeight: FONT_SIZES.sm * 1.5,
-  },
-  subjectCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  catIconBox: {
+    width: 52,
+    height: 52,
     borderRadius: RADIUS.md,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-    minHeight: 44,
-    ...SHADOWS.sm,
-  },
-  subjectIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subjectName: {
+  catLabel: {
     fontSize: FONT_SIZES.base,
-    fontFamily: FONTS.sansMedium,
+    fontFamily: FONTS.sansSemiBold,
     lineHeight: FONT_SIZES.base * 1.5,
   },
-  subjectTopicCount: {
+  catDesc: {
     fontSize: FONT_SIZES.sm,
     fontFamily: FONTS.sansRegular,
-    lineHeight: FONT_SIZES.sm * 1.6,
+    marginTop: 2,
+    lineHeight: FONT_SIZES.sm * 1.5,
+  },
+  catCount: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.sansMedium,
+    lineHeight: FONT_SIZES.sm * 1.5,
   },
 });
