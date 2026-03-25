@@ -1,6 +1,5 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Slider from '@react-native-community/slider';
+import React, { useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
@@ -26,26 +25,63 @@ export function QuestionCountSlider({
 }: QuestionCountSliderProps) {
   const { colors } = useTheme();
   const { impact } = useHaptic();
-  const lastValue = useRef(value);
 
+  const trackWidth = useRef(0);
+  const lastSnapped = useRef(value);
+
+  const pct = (value - min) / (max - min);
   const showProBadge = value > freeMax && !isPremium;
+  const freeMaxPct = (freeMax - min) / (max - min);
 
-  function handleValueChange(v: number) {
-    const snapped = Math.round(v / step) * step;
-    const clamped = Math.max(min, Math.min(max, snapped));
-    if (clamped !== lastValue.current) {
-      lastValue.current = clamped;
-      impact();
-      onChange(clamped);
-    }
-  }
+  const valueFromX = useCallback(
+    (x: number) => {
+      const ratio = Math.max(0, Math.min(1, x / trackWidth.current));
+      const raw = min + ratio * (max - min);
+      const snapped = Math.round(raw / step) * step;
+      return Math.max(min, Math.min(max, snapped));
+    },
+    [min, max, step],
+  );
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e) => {
+        const x = e.nativeEvent.locationX;
+        const v = valueFromX(x);
+        if (v !== lastSnapped.current) {
+          lastSnapped.current = v;
+          impact();
+          onChange(v);
+        }
+      },
+      onPanResponderMove: (e) => {
+        const x = e.nativeEvent.locationX;
+        const v = valueFromX(x);
+        if (v !== lastSnapped.current) {
+          lastSnapped.current = v;
+          impact();
+          onChange(v);
+        }
+      },
+    }),
+  ).current;
+
+  const handleLayout = (e: LayoutChangeEvent) => {
+    trackWidth.current = e.nativeEvent.layout.width;
+  };
+
+  const ringColor =
+    value >= 40 ? colors.primary : value >= 20 ? colors.success : colors.primary;
 
   return (
     <View style={styles.container}>
-      {/* Value + badge */}
+      {/* Value display */}
       <View style={styles.valueRow}>
         <Text style={[styles.valueText, { color: colors.textPrimary }]}>
           {value}
+          <Text style={[styles.valueUnit, { color: colors.textMuted }]}> questions</Text>
         </Text>
         {showProBadge && (
           <View style={[styles.proBadge, { backgroundColor: '#7C3AED' }]}>
@@ -54,51 +90,94 @@ export function QuestionCountSlider({
         )}
       </View>
 
-      {/* Native slider */}
-      <Slider
-        style={styles.slider}
-        minimumValue={min}
-        maximumValue={max}
-        step={step}
-        value={value}
-        onValueChange={handleValueChange}
-        minimumTrackTintColor={colors.primary}
-        maximumTrackTintColor={colors.border}
-        thumbTintColor={colors.primary}
-      />
+      {/* Track + thumb */}
+      <View
+        style={styles.trackContainer}
+        onLayout={handleLayout}
+        {...panResponder.panHandlers}
+      >
+        {/* Background track */}
+        <View style={[styles.track, { backgroundColor: colors.border }]} />
+
+        {/* Free tier limit marker */}
+        {!isPremium && (
+          <View
+            style={[
+              styles.limitMarker,
+              {
+                left: `${freeMaxPct * 100}%` as any,
+                backgroundColor: colors.textFaint,
+              },
+            ]}
+          />
+        )}
+
+        {/* Filled track */}
+        <View
+          style={[
+            styles.fill,
+            {
+              width: `${pct * 100}%` as any,
+              backgroundColor: showProBadge ? '#7C3AED' : ringColor,
+            },
+          ]}
+        />
+
+        {/* Thumb */}
+        <View
+          style={[
+            styles.thumb,
+            {
+              left: `${pct * 100}%` as any,
+              backgroundColor: showProBadge ? '#7C3AED' : ringColor,
+              borderColor: colors.appBackground,
+            },
+          ]}
+        />
+      </View>
 
       {/* Min / max labels */}
       <View style={styles.labelsRow}>
-        <Text style={[styles.labelText, { color: colors.textMuted }]}>{min}</Text>
-        <Text style={[styles.labelText, { color: colors.textMuted }]}>{max}</Text>
+        <Text style={[styles.labelText, { color: colors.textFaint }]}>{min}</Text>
+        {!isPremium && (
+          <Text style={[styles.labelFree, { color: colors.textFaint }]}>
+            Free up to {freeMax}
+          </Text>
+        )}
+        <Text style={[styles.labelText, { color: colors.textFaint }]}>{max}</Text>
       </View>
 
-      {/* Upsell */}
       {showProBadge && (
         <Text style={[styles.upsellText, { color: colors.textMuted }]}>
-          Upgrade to generate more than {freeMax} questions
+          Upgrade to Pro to generate up to {max} questions
         </Text>
       )}
     </View>
   );
 }
 
+const TRACK_HEIGHT = 6;
+const THUMB_SIZE = 22;
+
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'stretch',
     paddingTop: SPACING.xs,
   },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
     gap: SPACING.sm,
   },
   valueText: {
-    fontSize: FONT_SIZES.display,
+    fontSize: FONT_SIZES.xxl,
     fontFamily: FONTS.displayBold,
     includeFontPadding: false,
+  },
+  valueUnit: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONTS.sansRegular,
   },
   proBadge: {
     borderRadius: RADIUS.xs,
@@ -111,17 +190,58 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansBold,
     includeFontPadding: false,
   },
-  slider: {
-    width: '100%',
-    height: 40,
+  trackContainer: {
+    height: THUMB_SIZE + 8,
+    justifyContent: 'center',
+    paddingHorizontal: THUMB_SIZE / 2,
+    marginHorizontal: -(THUMB_SIZE / 2),
+  },
+  track: {
+    height: TRACK_HEIGHT,
+    borderRadius: TRACK_HEIGHT / 2,
+    position: 'absolute',
+    left: THUMB_SIZE / 2,
+    right: THUMB_SIZE / 2,
+  },
+  fill: {
+    height: TRACK_HEIGHT,
+    borderRadius: TRACK_HEIGHT / 2,
+    position: 'absolute',
+    left: THUMB_SIZE / 2,
+  },
+  thumb: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: THUMB_SIZE / 2,
+    borderWidth: 3,
+    position: 'absolute',
+    marginLeft: -(THUMB_SIZE / 2),
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+  },
+  limitMarker: {
+    position: 'absolute',
+    width: 2,
+    height: 14,
+    borderRadius: 1,
+    marginLeft: -1,
   },
   labelsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginTop: -4,
+    alignItems: 'center',
+    marginTop: SPACING.xs,
+    paddingHorizontal: 0,
   },
   labelText: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: FONTS.sansRegular,
+    includeFontPadding: false,
+  },
+  labelFree: {
     fontSize: FONT_SIZES.xs,
     fontFamily: FONTS.sansRegular,
     includeFontPadding: false,

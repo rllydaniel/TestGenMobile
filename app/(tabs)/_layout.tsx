@@ -13,6 +13,9 @@ export default function TabLayout() {
       <Tabs.Screen name="generate" />
       <Tabs.Screen name="library" />
       <Tabs.Screen name="profile" />
+      {/* Hidden from tab bar — accessible as routes but no tab item */}
+      <Tabs.Screen name="history" options={{ href: null }} />
+      <Tabs.Screen name="study" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -50,17 +50,18 @@ const AccuracyCard = React.memo(function AccuracyCard({
   bestSubject: string;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
+  const avgScore = accuracyPct > 0 ? `${Math.round(accuracyPct)}%` : '—';
   const stats = [
-    { label: 'QUESTIONS', value: String(totalQuestions) },
+    { label: 'ANSWERED', value: totalQuestions > 0 ? String(totalQuestions) : '—' },
     { label: 'BEST SUBJECT', value: bestSubject },
-    { label: 'TESTS TAKEN', value: String(totalTests) },
+    { label: 'AVG SCORE', value: avgScore },
   ];
 
   return (
     <View
       style={[
         styles.accuracyCard,
-        { backgroundColor: colors.surface, borderColor: colors.border },
+        { backgroundColor: colors.surface, borderColor: `${colors.border}` },
       ]}
     >
       {/* Ring */}

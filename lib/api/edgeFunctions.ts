@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
 interface CallFunctionParams {
   functionName: string;
   body: Record<string, any>;
@@ -23,9 +25,12 @@ export const callEdgeFunction = async <T>({
 
     const { data, error } = await supabase.functions.invoke(functionName, {
       body,
-      headers: session?.access_token
-        ? { Authorization: `Bearer ${session.access_token}` }
-        : undefined,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        ...(session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {}),
+      },
     });
 
     if (error) {
