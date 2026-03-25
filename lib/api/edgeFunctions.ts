@@ -16,7 +16,17 @@ export const callEdgeFunction = async <T>({
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const { data, error } = await supabase.functions.invoke(functionName, { body });
+    // Force a server-side token validation + refresh so we always send a fresh JWT.
+    // getUser() makes a network round-trip and updates the stored session if needed.
+    await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const { data, error } = await supabase.functions.invoke(functionName, {
+      body,
+      headers: session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : undefined,
+    });
 
     if (error) {
       if (error instanceof FunctionsHttpError) {

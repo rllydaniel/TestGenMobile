@@ -12,7 +12,6 @@ export default function AppLayout() {
       {/* Flashcards */}
       <Stack.Screen name="flashcards/index" />
       <Stack.Screen name="flashcards/[id]" />
-      <Stack.Screen name="flashcards/edit" />
 
       {/* Plan flow */}
       <Stack.Screen name="plan/setup" />
