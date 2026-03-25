@@ -35,11 +35,11 @@ export const AccuracyRing = ({ accuracy, size = 80, strokeWidth = 7 }: AccuracyR
     strokeDashoffset: circumference * (1 - progress.value),
   }));
 
-  const ringColor = accuracy >= 75
+  const ringColor = accuracy >= 80
     ? colors.success
     : accuracy >= 50
-    ? colors.primary
-    : colors.warning;
+    ? colors.warning
+    : colors.error;
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
@@ -73,9 +73,9 @@ export const AccuracyRing = ({ accuracy, size = 80, strokeWidth = 7 }: AccuracyR
       }}>
         <Text style={{
           fontFamily: FONTS.displayBold,
-          fontSize: size === 80 ? 18 : 14,
-          color: colors.textPrimary,
-          lineHeight: size === 80 ? 22 : 18,
+          fontSize: Math.round(size * 0.22),
+          color: ringColor,
+          lineHeight: Math.round(size * 0.27),
           includeFontPadding: false,
         }}>
           {Math.round(accuracy)}%

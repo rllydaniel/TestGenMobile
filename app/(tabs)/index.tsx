@@ -34,6 +34,65 @@ import { subjects } from '@/lib/subjects';
 import { useAuth } from '@/lib/auth';
 
 /* ------------------------------------------------------------------ */
+/*  AccuracyCard — full-width horizontal ring + mini-stats            */
+/* ------------------------------------------------------------------ */
+
+const AccuracyCard = React.memo(function AccuracyCard({
+  accuracyPct,
+  totalQuestions,
+  totalTests,
+  bestSubject,
+  colors,
+}: {
+  accuracyPct: number;
+  totalQuestions: number;
+  totalTests: number;
+  bestSubject: string;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  const stats = [
+    { label: 'QUESTIONS', value: String(totalQuestions) },
+    { label: 'BEST SUBJECT', value: bestSubject },
+    { label: 'TESTS TAKEN', value: String(totalTests) },
+  ];
+
+  return (
+    <View
+      style={[
+        styles.accuracyCard,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
+      {/* Ring */}
+      <AccuracyRing accuracy={accuracyPct} size={80} strokeWidth={6} />
+
+      {/* Divider */}
+      <View style={[styles.accuracyDivider, { backgroundColor: colors.border }]} />
+
+      {/* Mini stats */}
+      <View style={styles.accuracyStats}>
+        {stats.map((s) => (
+          <View key={s.label} style={styles.accuracyStatItem}>
+            <Text
+              style={[styles.accuracyStatLabel, { color: colors.textFaint }]}
+              numberOfLines={1}
+            >
+              {s.label}
+            </Text>
+            <Text
+              style={[styles.accuracyStatValue, { color: colors.textPrimary }]}
+              numberOfLines={1}
+            >
+              {s.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+});
+
+/* ------------------------------------------------------------------ */
 /*  Memoised sub-components                                           */
 /* ------------------------------------------------------------------ */
 
@@ -254,6 +313,29 @@ export default function HomeScreen() {
     );
   }, [focusTopic]);
 
+  const totalQuestions = useMemo(
+    () => tests?.reduce((sum, t) => sum + (t.totalQuestions ?? 0), 0) ?? 0,
+    [tests],
+  );
+
+  const bestSubject = useMemo(() => {
+    if (!tests || tests.length === 0) return '—';
+    const scores: Record<string, { total: number; count: number }> = {};
+    for (const t of tests) {
+      const pct = t.totalQuestions > 0 ? (t.score / t.totalQuestions) * 100 : 0;
+      if (!scores[t.subject]) scores[t.subject] = { total: 0, count: 0 };
+      scores[t.subject].total += pct;
+      scores[t.subject].count += 1;
+    }
+    let best = '';
+    let bestAvg = -1;
+    for (const [subj, data] of Object.entries(scores)) {
+      const avg = data.total / data.count;
+      if (avg > bestAvg) { bestAvg = avg; best = subj; }
+    }
+    return subjects.find((s) => s.id === best)?.name ?? (best || '—');
+  }, [tests]);
+
   /* ---------- callbacks ---------- */
 
   const { impact: haptic } = useHaptic();
@@ -385,41 +467,40 @@ export default function HomeScreen() {
         </View>
         </FadeInView>
 
-        {/* ===== Stats layout ===== */}
+        {/* ===== Accuracy card (full width) ===== */}
         <FadeInView delay={200} duration={300}>
-        <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg }}>
-          {/* Left column — Accuracy full height */}
-          <StatCard
-            label="ACCURACY"
-            value={`${stats?.averageScore ?? 0}%`}
-            icon="pie-chart"
-            iconColor={colors.primary}
-            isAccuracy
+        <View style={{ marginBottom: SPACING.sm }}>
+          <AccuracyCard
             accuracyPct={stats?.averageScore ?? 0}
+            totalQuestions={totalQuestions}
+            totalTests={tests?.length ?? 0}
+            bestSubject={bestSubject}
+            colors={colors}
+          />
+        </View>
+        </FadeInView>
+
+        {/* ===== Streak + Today's Focus row ===== */}
+        <FadeInView delay={250} duration={300}>
+        <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg }}>
+          <StatCard
+            label="STREAK"
+            value={String(streak?.current_streak ?? 0)}
+            unit="days"
+            icon="flame"
+            iconColor={colors.warning}
             colors={colors}
             style={{ flex: 1 }}
           />
-          {/* Right column — Streak + Today's Focus stacked */}
-          <View style={{ flex: 1, gap: SPACING.sm }}>
-            <StatCard
-              label="STREAK"
-              value={String(streak?.current_streak ?? 0)}
-              unit="days"
-              icon="flame"
-              iconColor={colors.warning}
-              colors={colors}
-              style={{ flex: 1 }}
-            />
-            <StatCard
-              label="TODAY'S FOCUS"
-              icon="time"
-              iconColor={colors.textMuted}
-              focusTopic={focusTopic}
-              focusSubjectColor={focusSubject?.color}
-              colors={colors}
-              style={{ flex: 1 }}
-            />
-          </View>
+          <StatCard
+            label="TODAY'S FOCUS"
+            icon="time"
+            iconColor={colors.textMuted}
+            focusTopic={focusTopic}
+            focusSubjectColor={focusSubject?.color}
+            colors={colors}
+            style={{ flex: 1 }}
+          />
         </View>
         </FadeInView>
 
@@ -847,6 +928,40 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansMedium,
     fontSize: FONT_SIZES.sm,
     lineHeight: FONT_SIZES.sm * 1.5,
+  },
+
+  /* accuracy card */
+  accuracyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    gap: 16,
+  },
+  accuracyDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: 4,
+  },
+  accuracyStats: {
+    flex: 1,
+    gap: 10,
+  },
+  accuracyStatItem: {
+    gap: 2,
+  },
+  accuracyStatLabel: {
+    fontSize: FONT_SIZES.xs - 1,
+    fontFamily: FONTS.sansBold,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    includeFontPadding: false,
+  },
+  accuracyStatValue: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: FONTS.sansSemiBold,
+    includeFontPadding: false,
   },
 
   /* stats grid */
