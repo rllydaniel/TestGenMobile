@@ -6,14 +6,12 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 
 interface SubjectItem {
@@ -80,17 +78,12 @@ const CATEGORY_TITLES: Record<string, string> = {
   languages: 'Languages',
 };
 
-function hapticFeedback() {
-  if (Platform.OS !== 'web') {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-}
-
 export default function SubjectsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { category } = useLocalSearchParams<{ category: string }>();
   const { colors } = useTheme();
+  const { impact } = useHaptic();
 
   const [search, setSearch] = useState('');
 
@@ -108,7 +101,7 @@ export default function SubjectsScreen() {
   const categoryTitle = CATEGORY_TITLES[category ?? ''] ?? 'Subjects';
 
   const handleSubjectPress = (subject: SubjectItem) => {
-    hapticFeedback();
+    impact();
     router.push({
       pathname: '/(app)/create/config',
       params: { subject: subject.label },
@@ -158,7 +151,7 @@ export default function SubjectsScreen() {
         <View style={styles.headerRow}>
           <Pressable
             onPress={() => {
-              hapticFeedback();
+              impact();
               router.back();
             }}
             style={({ pressed }) => [
@@ -204,7 +197,7 @@ export default function SubjectsScreen() {
           {search.length > 0 && (
             <Pressable
               onPress={() => {
-                hapticFeedback();
+                impact();
                 setSearch('');
               }}
               style={({ pressed }) => [

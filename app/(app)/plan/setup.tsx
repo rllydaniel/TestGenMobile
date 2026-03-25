@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   View,
   Text,
@@ -32,6 +33,7 @@ export default function PlanSetupScreen() {
   const router = useRouter();
 
   const [subject, setSubject] = useState('');
+  const debouncedSubject = useDebounce(subject);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [targetDay, setTargetDay] = useState('');
@@ -40,8 +42,8 @@ export default function PlanSetupScreen() {
   const [minutesPerSession, setMinutesPerSession] = useState(30);
   const [goalScore, setGoalScore] = useState('');
 
-  const filtered = subject.length > 0
-    ? POPULAR_EXAMS.filter((e) => e.toLowerCase().includes(subject.toLowerCase()))
+  const filtered = debouncedSubject.length > 0
+    ? POPULAR_EXAMS.filter((e) => e.toLowerCase().includes(debouncedSubject.toLowerCase()))
     : POPULAR_EXAMS;
 
   const toggleDay = (day: number) => {

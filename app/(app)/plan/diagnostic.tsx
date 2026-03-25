@@ -125,7 +125,7 @@ export default function PlanDiagnosticScreen() {
             minutesPerSession: params.minutesPerSession,
             goalScore: params.goalScore,
           });
-          router.replace({
+          router.push({
             pathname: '/(app)/test/[id]',
             params: {
               id: result.sessionId,
@@ -180,7 +180,7 @@ export default function PlanDiagnosticScreen() {
             onPress={() => router.back()}
             style={[styles.retryBtn, { backgroundColor: colors.primary, ...SHADOWS.primary }]}
           >
-            <Text style={[styles.retryText, { color: '#FFFFFF' }]}>Go Back</Text>
+            <Text style={[styles.retryText, { color: colors.textOnPrimary }]}>Go Back</Text>
           </Pressable>
         </View>
       </View>

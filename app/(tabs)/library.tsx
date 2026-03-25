@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   View,
   Text,
@@ -6,13 +7,12 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { FadeInView } from '@/components/ui/FadeInView';
+import { useHaptic } from '@/hooks/useHaptic';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -98,17 +98,16 @@ function FlashcardsPanel() {
   const router = useRouter();
   const { data: decks } = useFlashcardDecks();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery);
 
-  const haptic = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, []);
+  const { impact: haptic } = useHaptic();
 
   const filteredDecks = useMemo(
     () =>
       (decks ?? []).filter((d) =>
-        searchQuery ? d.name.toLowerCase().includes(searchQuery.toLowerCase()) : true,
+        debouncedSearch ? d.name.toLowerCase().includes(debouncedSearch.toLowerCase()) : true,
       ),
-    [decks, searchQuery],
+    [decks, debouncedSearch],
   );
 
   const totalDue = useMemo(
@@ -320,16 +319,17 @@ function GuidesPanel() {
   const { colors } = useTheme();
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
   const [activeFilter, setActiveFilter] = useState('All');
 
   const filteredSubjects = useMemo(() => {
     const filterFn = CATEGORY_MAP[activeFilter] ?? CATEGORY_MAP.All;
     return subjects.filter((s) => {
       if (!filterFn(s.id)) return false;
-      if (search.trim()) return s.name.toLowerCase().includes(search.trim().toLowerCase());
+      if (debouncedSearch.trim()) return s.name.toLowerCase().includes(debouncedSearch.trim().toLowerCase());
       return true;
     });
-  }, [search, activeFilter]);
+  }, [debouncedSearch, activeFilter]);
 
   return (
     <View>

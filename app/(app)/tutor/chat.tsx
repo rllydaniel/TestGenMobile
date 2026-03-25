@@ -13,8 +13,8 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 import { supabase } from '@/lib/supabase';
 import { useTutorMessages, useSendTutorMessage } from '@/hooks/useTutor';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
@@ -85,6 +85,7 @@ function TypingIndicator({ colors }: { colors: any }) {
 
 export default function TutorChatScreen() {
   const { colors } = useTheme();
+  const { impact } = useHaptic();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ sessionId: string }>();
@@ -128,7 +129,7 @@ export default function TutorChatScreen() {
       if (!trimmed || isThinking || !params.sessionId) return;
 
       setInputText('');
-      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      impact();
 
       // Optimistic user message
       const tempUserMsg: TutorMessage = {

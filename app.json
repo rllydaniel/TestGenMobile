@@ -48,7 +48,8 @@
         {
           "faceIDPermission": "Allow TestGen to use Face ID to verify your identity"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

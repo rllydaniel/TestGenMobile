@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
 
 interface TopicSelectorProps {
@@ -13,12 +13,6 @@ interface TopicSelectorProps {
   placeholder?: string;
 }
 
-function triggerHaptic() {
-  if (Platform.OS !== 'web') {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-}
-
 export function TopicSelector({
   availableTopics,
   selectedTopics,
@@ -27,6 +21,7 @@ export function TopicSelector({
   placeholder = 'Search topics...',
 }: TopicSelectorProps) {
   const { colors } = useTheme();
+  const { impact } = useHaptic();
   const [searchText, setSearchText] = useState('');
 
   const filteredTopics = useMemo(() => {
@@ -41,7 +36,7 @@ export function TopicSelector({
     (topic: string) => {
       if (selectedTopics.includes(topic)) return;
       if (selectedTopics.length >= maxTopics) return;
-      triggerHaptic();
+      impact();
       onTopicsChange([...selectedTopics, topic]);
       setSearchText('');
     },
@@ -50,7 +45,7 @@ export function TopicSelector({
 
   const handleRemoveTopic = useCallback(
     (topic: string) => {
-      triggerHaptic();
+      impact();
       onTopicsChange(selectedTopics.filter((t) => t !== topic));
     },
     [selectedTopics, onTopicsChange],

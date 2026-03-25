@@ -4,11 +4,13 @@ import {
   Text,
   FlatList,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAchievements } from '@/hooks/useAchievements';
 import { Card } from '@/components/ui/Card';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
 
@@ -16,18 +18,21 @@ export default function AchievementsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { data: achievements = [], isLoading } = useAchievements();
+
+  const unlockedKeys = new Set(achievements.map(a => a.achievementKey));
 
   const ACHIEVEMENTS = [
-    { id: '1', name: 'First Test', description: 'Complete your first test', icon: 'ribbon', color: '#6C5CE7' },
-    { id: '2', name: 'Perfect Score', description: 'Get 100% on a test', icon: 'star', color: '#FDCB6E' },
-    { id: '3', name: 'Study Streak', description: 'Maintain a 7-day streak', icon: 'flame', color: '#FF6347' },
-    { id: '4', name: 'Subject Master', description: 'Complete 10 tests in one subject', icon: 'school', color: '#00CEC9' },
-    { id: '5', name: 'Flash Scholar', description: 'Master a flashcard deck', icon: 'flash', color: colors.success },
-    { id: '6', name: 'Night Owl', description: 'Study after midnight', icon: 'moon', color: '#A29BFE' },
-    { id: '7', name: 'Speed Demon', description: 'Finish a test with >50% time remaining', icon: 'speedometer', color: '#E84393' },
-    { id: '8', name: 'Marathon', description: 'Complete 50 tests total', icon: 'trophy', color: '#D63031' },
-    { id: '9', name: 'Diverse Learner', description: 'Complete tests in 5 different subjects', icon: 'globe', color: '#E17055' },
-    { id: '10', name: 'Upload Pro', description: 'Generate 5 quizzes from uploaded notes', icon: 'cloud-upload', color: '#FD79A8' },
+    { id: '1', key: 'first_test', name: 'First Test', description: 'Complete your first test', icon: 'ribbon', color: '#6C5CE7' },
+    { id: '2', key: 'perfect_score', name: 'Perfect Score', description: 'Get 100% on a test', icon: 'star', color: '#FDCB6E' },
+    { id: '3', key: 'study_streak', name: 'Study Streak', description: 'Maintain a 7-day streak', icon: 'flame', color: '#FF6347' },
+    { id: '4', key: 'subject_master', name: 'Subject Master', description: 'Complete 10 tests in one subject', icon: 'school', color: '#00CEC9' },
+    { id: '5', key: 'flash_scholar', name: 'Flash Scholar', description: 'Master a flashcard deck', icon: 'flash', color: colors.success },
+    { id: '6', key: 'night_owl', name: 'Night Owl', description: 'Study after midnight', icon: 'moon', color: '#A29BFE' },
+    { id: '7', key: 'speed_demon', name: 'Speed Demon', description: 'Finish a test with >50% time remaining', icon: 'speedometer', color: '#E84393' },
+    { id: '8', key: 'marathon', name: 'Marathon', description: 'Complete 50 tests total', icon: 'trophy', color: '#D63031' },
+    { id: '9', key: 'diverse_learner', name: 'Diverse Learner', description: 'Complete tests in 5 different subjects', icon: 'globe', color: '#E17055' },
+    { id: '10', key: 'upload_pro', name: 'Upload Pro', description: 'Generate 5 quizzes from uploaded notes', icon: 'cloud-upload', color: '#FD79A8' },
   ];
 
   return (
@@ -42,6 +47,11 @@ export default function AchievementsScreen() {
           </Text>
         </View>
 
+        {isLoading ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
         <FlatList
           data={ACHIEVEMENTS}
           numColumns={2}
@@ -49,7 +59,7 @@ export default function AchievementsScreen() {
           columnWrapperStyle={{ gap: 12 }}
           contentContainerStyle={{ gap: 12, paddingBottom: 120 }}
           renderItem={({ item }) => {
-            const unlocked = false; // TODO: check from API
+            const unlocked = unlockedKeys.has(item.key);
             return (
               <Card style={{ flex: 1, alignItems: 'center', padding: SPACING.md, opacity: unlocked ? 1 : 0.5, backgroundColor: colors.surface }}>
                 <View style={{
@@ -72,6 +82,7 @@ export default function AchievementsScreen() {
             );
           }}
         />
+        )}
       </View>
     </View>
   );

@@ -8,15 +8,13 @@ import {
   Switch,
   ActivityIndicator,
   StyleSheet,
-  Platform,
   Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 import { generateTest, resolveQuestionTypes, QuestionTypeOption } from '@/lib/api/generateTest';
 import { TopicSelector } from '@/components/ui/TopicSelector';
@@ -39,17 +37,12 @@ const QUESTION_TYPE_OPTIONS: { key: QuestionTypeOption; label: string; desc: str
   { key: 'mixed', label: 'Mixed', desc: 'A combination of both types', icon: 'shuffle-outline' },
 ];
 
-function hapticFeedback() {
-  if (Platform.OS !== 'web') {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-}
-
 export default function ConfigScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { subject: subjectParam } = useLocalSearchParams<{ subject: string }>();
   const { colors } = useTheme();
+  const { impact } = useHaptic();
 
   const [customSubject, setCustomSubject] = useState(subjectParam ?? '');
   const isCustom = !subjectParam;
@@ -60,7 +53,6 @@ export default function ConfigScreen() {
   const [questionType, setQuestionType] = useState<QuestionTypeOption>('multiple-choice');
   const [timedMode, setTimedMode] = useState(false);
   const [timeLimit, setTimeLimit] = useState(15);
-  const [studyMode, setStudyMode] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -83,10 +75,9 @@ export default function ConfigScreen() {
       icon: 'document-text-outline',
     });
     if (timedMode) pills.push({ label: `${timeLimit} min`, icon: 'timer-outline' });
-    if (studyMode) pills.push({ label: 'Study Mode', icon: 'bulb-outline' });
     if (selectedTopics.length > 0) pills.push({ label: `${selectedTopics.length} topics`, icon: 'pricetags-outline' });
     return pills;
-  }, [questionCount, difficulty, questionType, timedMode, timeLimit, studyMode, selectedTopics]);
+  }, [questionCount, difficulty, questionType, timedMode, timeLimit, selectedTopics]);
 
   const handleGenerate = useCallback(async () => {
     if (!resolvedSubject) {
@@ -94,7 +85,7 @@ export default function ConfigScreen() {
       return;
     }
 
-    hapticFeedback();
+    impact();
     setLoading(true);
 
     try {
@@ -104,13 +95,13 @@ export default function ConfigScreen() {
         difficulty,
         questionTypes: resolveQuestionTypes(questionType),
         timeLimit: timedMode ? timeLimit * 60 : null,
-        studyMode,
+        studyMode: false,
         focusMode,
         topics: selectedTopics.length > 0 ? selectedTopics : undefined,
       });
 
       if (result.sessionId) {
-        router.replace({
+        router.push({
           pathname: '/(app)/test/[id]',
           params: { id: result.sessionId },
         });
@@ -120,7 +111,7 @@ export default function ConfigScreen() {
     } finally {
       setLoading(false);
     }
-  }, [resolvedSubject, questionCount, difficulty, questionType, timedMode, timeLimit, studyMode, selectedTopics, router]);
+  }, [resolvedSubject, questionCount, difficulty, questionType, timedMode, timeLimit, selectedTopics, router]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.appBackground }]}>
@@ -141,7 +132,7 @@ export default function ConfigScreen() {
         <View style={styles.header}>
           <Pressable
             onPress={() => {
-              hapticFeedback();
+              impact();
               router.back();
             }}
             style={({ pressed }) => [
@@ -240,7 +231,7 @@ export default function ConfigScreen() {
               <Pressable
                 key={opt.key}
                 onPress={() => {
-                  hapticFeedback();
+                  impact();
                   setDifficulty(opt.key);
                 }}
                 style={({ pressed }) => [
@@ -298,7 +289,7 @@ export default function ConfigScreen() {
                 <Pressable
                   key={opt.key}
                   onPress={() => {
-                    hapticFeedback();
+                    impact();
                     setQuestionType(opt.key);
                   }}
                   style={({ pressed }) => [
@@ -377,7 +368,7 @@ export default function ConfigScreen() {
             <Switch
               value={timedMode}
               onValueChange={(val) => {
-                hapticFeedback();
+                impact();
                 setTimedMode(val);
               }}
               trackColor={{ false: colors.surfaceSecondary, true: colors.primary }}
@@ -391,7 +382,7 @@ export default function ConfigScreen() {
                 <Pressable
                   key={mins}
                   onPress={() => {
-                    hapticFeedback();
+                    impact();
                     setTimeLimit(mins);
                   }}
                   style={({ pressed }) => [
@@ -429,45 +420,6 @@ export default function ConfigScreen() {
           )}
         </View>
 
-        {/* Study mode */}
-        <View style={styles.section}>
-          <View
-            style={[
-              styles.toggleRow,
-              {
-                backgroundColor: studyMode ? `${colors.primary}10` : colors.surface,
-                borderColor: studyMode ? `${colors.primary}40` : colors.border,
-              },
-              SHADOWS.md,
-            ]}
-          >
-            <Ionicons name="bulb-outline" size={20} color={colors.textPrimary} />
-            <View style={styles.toggleText}>
-              <Text
-                style={[styles.toggleLabel, { color: colors.textPrimary }]}
-                numberOfLines={1}
-              >
-                Show Explanations
-              </Text>
-              <Text
-                style={[styles.toggleDescription, { color: colors.textMuted }]}
-                numberOfLines={1}
-              >
-                Best for learning new material
-              </Text>
-            </View>
-            <Switch
-              value={studyMode}
-              onValueChange={(val) => {
-                hapticFeedback();
-                setStudyMode(val);
-              }}
-              trackColor={{ false: colors.surfaceSecondary, true: colors.primary }}
-              thumbColor={colors.textOnPrimary}
-            />
-          </View>
-        </View>
-
         {/* Exam Focus mode */}
         <View style={styles.section}>
           <View
@@ -498,7 +450,7 @@ export default function ConfigScreen() {
             <Switch
               value={focusMode}
               onValueChange={(val) => {
-                hapticFeedback();
+                impact();
                 setFocusMode(val);
               }}
               trackColor={{ false: colors.surfaceSecondary, true: colors.primary }}

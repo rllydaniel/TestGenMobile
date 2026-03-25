@@ -6,13 +6,12 @@ import {
   Animated,
   Dimensions,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -386,11 +385,7 @@ export default function FlashcardStudyScreen() {
 
   /* ---------- helpers ---------- */
 
-  const haptic = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  }, []);
+  const { impact: haptic } = useHaptic();
 
   const flipCard = useCallback(() => {
     haptic();

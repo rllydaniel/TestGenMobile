@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -174,6 +175,14 @@ export default function GuideDetailScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={32}
       >
+        {/* Hero image */}
+        {subject.coverImage ? (
+          <View style={[styles.hero, { marginHorizontal: -SPACING.screenH, marginTop: -SPACING.lg }]}>
+            <Image source={{ uri: subject.coverImage }} style={styles.heroImage} resizeMode="cover" />
+            <View style={styles.heroOverlay} />
+          </View>
+        ) : null}
+
         {/* Guide title */}
         <Text style={[styles.guideTitle, { color: colors.textPrimary }]}>{subject.name} Study Guide</Text>
         <Text style={[styles.guideMeta, { color: colors.textMuted }]}>
@@ -306,6 +315,23 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: SPACING.screenH,
     paddingTop: SPACING.lg,
+  },
+  hero: {
+    height: 180,
+    overflow: 'hidden',
+    marginBottom: SPACING.lg,
+  },
+  heroImage: {
+    width: '100%',
+    height: 180,
+  },
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   guideTitle: {
     fontSize: FONT_SIZES.xl,

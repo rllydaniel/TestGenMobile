@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
+import { useAppStore } from '@/stores/app-store';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -133,13 +135,13 @@ function StepSubjects({
     <View style={styles.stepContainer}>
       <Text style={[styles.heading, { color: colors.textPrimary }]}>What are you studying for?</Text>
       <Text style={[styles.subheading, { color: colors.textMuted }]}>
-        Select your primary subject or exam
+        Select up to 5 subjects or exams
       </Text>
       {selected.length > 0 && (
         <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md }}>
           <Badge
-            text={`${selected.length}/3 selected`}
-            color={selected.length === 3 ? colors.warning : colors.primary}
+            text={`${selected.length}/5 selected`}
+            color={selected.length === 5 ? colors.warning : colors.primary}
           />
         </View>
       )}
@@ -233,9 +235,9 @@ function StepExamDate({
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={[styles.heading, { color: colors.textPrimary }]}>When's your exam?</Text>
+      <Text style={[styles.heading, { color: colors.textPrimary }]}>By when do you want to be fully prepared?</Text>
       <Text style={[styles.subheading, { color: colors.textMuted }]}>
-        We'll build a study plan around your timeline
+        Set your target date and we'll plan backwards from it
       </Text>
 
       {/* No date toggle */}
@@ -315,6 +317,7 @@ function StepGoal({
   onSetGoal: (score: number | null) => void;
   colors: any;
 }) {
+  const { impact } = useHaptic();
   return (
     <View style={styles.stepContainer}>
       <Text style={[styles.heading, { color: colors.textPrimary }]}>What's your target score?</Text>
@@ -329,9 +332,7 @@ function StepGoal({
             <Pressable
               key={preset}
               onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
+                impact();
                 onSetGoal(isSelected ? null : preset);
               }}
               style={[
@@ -413,7 +414,9 @@ function StepGoal({
 
 export default function OnboardingScreen() {
   const { colors } = useTheme();
+  const { impact } = useHaptic();
   const router = useRouter();
+  const setOnboardingComplete = useAppStore((s) => s.setOnboardingComplete);
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
 
@@ -431,12 +434,10 @@ export default function OnboardingScreen() {
   const [goalScore, setGoalScore] = useState<number | null>(null);
 
   const toggleSubject = useCallback((id: string) => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    impact();
     setSelectedSubjects((prev) => {
       if (prev.includes(id)) return prev.filter((s) => s !== id);
-      if (prev.length >= 3) return prev; // max 3
+      if (prev.length >= 5) return prev; // max 5
       return [...prev, id];
     });
   }, []);
@@ -456,18 +457,19 @@ export default function OnboardingScreen() {
     if (currentStep < TOTAL_STEPS - 1) {
       goToStep(currentStep + 1);
     } else {
-      // Get Started
+      setOnboardingComplete(true);
       router.replace('/(tabs)');
     }
-  }, [currentStep, goToStep, router]);
+  }, [currentStep, goToStep, router, setOnboardingComplete]);
 
   const handleSkip = useCallback(() => {
     if (currentStep < TOTAL_STEPS - 1) {
       goToStep(currentStep + 1);
     } else {
+      setOnboardingComplete(true);
       router.replace('/(tabs)');
     }
-  }, [currentStep, goToStep, router]);
+  }, [currentStep, goToStep, router, setOnboardingComplete]);
 
   const handleChangeMonth = useCallback(
     (m: number) => {

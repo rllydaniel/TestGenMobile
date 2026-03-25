@@ -5,14 +5,12 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 
 interface Category {
@@ -83,19 +81,14 @@ const CATEGORIES: Category[] = [
   },
 ];
 
-function hapticFeedback() {
-  if (Platform.OS !== 'web') {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-}
-
 export default function CategoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { impact } = useHaptic();
 
   const handleCategoryPress = (category: Category) => {
-    hapticFeedback();
+    impact();
     if (category.key === 'custom') {
       router.push({
         pathname: '/(app)/create/config',
@@ -126,7 +119,7 @@ export default function CategoryScreen() {
         <View style={styles.header}>
           <Pressable
             onPress={() => {
-              hapticFeedback();
+              impact();
               router.back();
             }}
             style={({ pressed }) => [

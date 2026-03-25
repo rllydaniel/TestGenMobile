@@ -17,7 +17,8 @@ import {
 } from '@expo-google-fonts/playfair-display';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useAppStore } from '@/stores/app-store';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
@@ -30,18 +31,28 @@ function AuthGate() {
   const { session, isLoaded } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const onboardingComplete = useAppStore((s) => s.onboardingComplete);
+  const hydrate = useAppStore((s) => s.hydrate);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    hydrate().then(() => setHydrated(true));
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded || !hydrated) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === '(app)' && segments[1] === 'onboarding';
 
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/sign-in');
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)');
+    } else if (session && !onboardingComplete && !inOnboarding) {
+      router.replace('/(app)/onboarding');
     }
-  }, [session, isLoaded, segments]);
+  }, [session, isLoaded, segments, hydrated, onboardingComplete]);
 
   return <Slot />;
 }

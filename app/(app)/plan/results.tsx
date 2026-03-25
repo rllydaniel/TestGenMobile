@@ -258,7 +258,7 @@ export default function PlanResultsScreen() {
         planData: planData ?? { weeks: [], totalSessions: 0, completedSessions: 0 },
       });
 
-      router.replace({
+      router.push({
         pathname: '/(app)/plan/view',
         params: { planId: plan.id },
       });
@@ -302,7 +302,7 @@ export default function PlanResultsScreen() {
           onPress={() => router.back()}
           style={[styles.backBtn, { backgroundColor: colors.primary, ...SHADOWS.primary }]}
         >
-          <Text style={[styles.backBtnText, { color: '#FFF' }]}>Go Back</Text>
+          <Text style={[styles.backBtnText, { color: colors.textOnPrimary }]}>Go Back</Text>
         </Pressable>
       </View>
     );
@@ -396,7 +396,7 @@ export default function PlanResultsScreen() {
           {building ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
-            <Text style={[styles.primaryBtnText, { color: '#FFF' }]}>Build My Study Plan →</Text>
+            <Text style={[styles.primaryBtnText, { color: colors.textOnPrimary }]}>Build My Study Plan →</Text>
           )}
         </Pressable>
 

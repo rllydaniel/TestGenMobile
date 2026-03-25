@@ -9,8 +9,8 @@ export default function TabLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="generate" />
       <Tabs.Screen name="plan" />
+      <Tabs.Screen name="generate" />
       <Tabs.Screen name="library" />
       <Tabs.Screen name="profile" />
     </Tabs>

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Text, Pressable, ViewStyle } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { FONTS, FONT_SIZES, RADIUS, SHADOWS } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 
 interface ButtonProps {
   label: string;
@@ -37,6 +37,7 @@ export const Button = ({
   style,
 }: ButtonProps) => {
   const { colors } = useTheme();
+  const { impact } = useHaptic();
   const displayLabel = label ?? title ?? '';
   const { height, fontSize, paddingH } = SIZE_MAP[size];
 
@@ -65,7 +66,7 @@ export const Button = ({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
-      onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+      onPressIn={() => impact()}
       style={({ pressed }) => [
         {
           height,

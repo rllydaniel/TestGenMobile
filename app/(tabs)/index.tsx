@@ -5,13 +5,12 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { FadeInView } from '@/components/ui/FadeInView';
+import { useHaptic } from '@/hooks/useHaptic';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { SectionLabel } from '@/components/ui/Label';
@@ -49,6 +48,7 @@ const StatCard = React.memo(function StatCard({
   focusTopic,
   focusSubjectColor,
   colors,
+  style,
 }: {
   label: string;
   value?: string;
@@ -60,9 +60,10 @@ const StatCard = React.memo(function StatCard({
   focusTopic?: string;
   focusSubjectColor?: string;
   colors: ReturnType<typeof useTheme>['colors'];
+  style?: any;
 }) {
   return (
-    <Card style={styles.statCard} shadow="md" padding="sm">
+    <Card style={[styles.statCard, style]} shadow="md" padding="sm">
       <View style={styles.statCardHeader}>
         <Text
           style={[
@@ -97,7 +98,7 @@ const StatCard = React.memo(function StatCard({
         <View style={styles.accuracyRow}>
           <AccuracyRing
             accuracy={accuracyPct ?? 0}
-            size={72}
+            size={88}
             strokeWidth={6}
           />
         </View>
@@ -147,15 +148,12 @@ const TestRow = React.memo(function TestRow({
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
   const scoreColor = getScoreColor(pct);
+  const { impact } = useHaptic();
 
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={() => {
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-      }}
+      onPressIn={() => impact()}
       style={({ pressed }) => [
         styles.testRow,
         {
@@ -258,11 +256,7 @@ export default function HomeScreen() {
 
   /* ---------- callbacks ---------- */
 
-  const haptic = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  }, []);
+  const { impact: haptic } = useHaptic();
 
   const handleCreateTest = useCallback(() => {
     router.push('/(tabs)/generate');
@@ -346,7 +340,7 @@ export default function HomeScreen() {
           <SectionLabel>TODAY'S FOCUS</SectionLabel>
           <Pressable
             onPress={handleCreateTest}
-            onPressIn={haptic}
+            onPressIn={() => haptic()}
             style={({ pressed }) => [
               styles.banner,
               {
@@ -391,10 +385,22 @@ export default function HomeScreen() {
         </View>
         </FadeInView>
 
-        {/* ===== Stats 2x2 grid ===== */}
+        {/* ===== Stats layout ===== */}
         <FadeInView delay={200} duration={300}>
-        <View style={{ marginBottom: SPACING.lg }}>
-          <View style={styles.statsGrid}>
+        <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg }}>
+          {/* Left column — Accuracy full height */}
+          <StatCard
+            label="ACCURACY"
+            value={`${stats?.averageScore ?? 0}%`}
+            icon="pie-chart"
+            iconColor={colors.primary}
+            isAccuracy
+            accuracyPct={stats?.averageScore ?? 0}
+            colors={colors}
+            style={{ flex: 1 }}
+          />
+          {/* Right column — Streak + Today's Focus stacked */}
+          <View style={{ flex: 1, gap: SPACING.sm }}>
             <StatCard
               label="STREAK"
               value={String(streak?.current_streak ?? 0)}
@@ -402,23 +408,7 @@ export default function HomeScreen() {
               icon="flame"
               iconColor={colors.warning}
               colors={colors}
-            />
-            <StatCard
-              label="TESTS TAKEN"
-              value={String(stats?.testsCompleted ?? 0)}
-              unit="total"
-              icon="bar-chart"
-              iconColor={colors.primary}
-              colors={colors}
-            />
-            <StatCard
-              label="ACCURACY"
-              value={`${stats?.averageScore ?? 0}%`}
-              icon="pie-chart"
-              iconColor={colors.primary}
-              isAccuracy
-              accuracyPct={stats?.averageScore ?? 0}
-              colors={colors}
+              style={{ flex: 1 }}
             />
             <StatCard
               label="TODAY'S FOCUS"
@@ -427,6 +417,7 @@ export default function HomeScreen() {
               focusTopic={focusTopic}
               focusSubjectColor={focusSubject?.color}
               colors={colors}
+              style={{ flex: 1 }}
             />
           </View>
         </View>
@@ -440,7 +431,7 @@ export default function HomeScreen() {
           {/* Flashcards card — surface bg, single column full-width */}
           <Pressable
             onPress={handleFlashcards}
-            onPressIn={haptic}
+            onPressIn={() => haptic()}
             style={({ pressed }) => [
               styles.quickCard,
               {
@@ -489,7 +480,7 @@ export default function HomeScreen() {
           {/* Create Test card — primary bg, single column full-width */}
           <Pressable
             onPress={handleCreateTest}
-            onPressIn={haptic}
+            onPressIn={() => haptic()}
             style={({ pressed }) => [
               styles.quickCard,
               {
@@ -540,7 +531,7 @@ export default function HomeScreen() {
             <SectionLabel>STUDY PLAN</SectionLabel>
             <Pressable
               onPress={() => router.push('/(app)/plan/view')}
-              onPressIn={haptic}
+              onPressIn={() => haptic()}
               style={({ pressed }) => [
                 styles.planWidget,
                 {
@@ -604,7 +595,7 @@ export default function HomeScreen() {
               </Text>
               <Pressable
                 onPress={handleViewAllResults}
-                onPressIn={haptic}
+                onPressIn={() => haptic()}
                 style={({ pressed }) => [
                   {
                     minHeight: 44,
@@ -747,7 +738,7 @@ export default function HomeScreen() {
       {/* Floating Action Button — New Test */}
       <Pressable
         onPress={handleCreateTest}
-        onPressIn={haptic}
+        onPressIn={() => haptic()}
         style={({ pressed }) => ({
           position: 'absolute',
           bottom: 24 + (insets.bottom || 0),
@@ -865,7 +856,6 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   statCard: {
-    width: '48.5%' as any,
     flexGrow: 1,
   },
   statCardHeader: {

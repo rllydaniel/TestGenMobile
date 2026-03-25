@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   View,
   Text,
@@ -33,6 +34,7 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const { data: tests, isLoading } = useTestHistory();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery);
 
   if (isLoading) {
     return (
@@ -50,8 +52,8 @@ export default function HistoryScreen() {
   }
 
   const filteredTests = (tests ?? []).filter((t) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase();
     const subjectName = subjects.find((s) => s.id === t.subject)?.name ?? t.subject;
     return (
       subjectName.toLowerCase().includes(q) ||

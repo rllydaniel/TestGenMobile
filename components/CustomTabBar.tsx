@@ -5,11 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { FONTS, FONT_SIZES, RADIUS, SHADOWS } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useHaptic } from '@/hooks/useHaptic';
 
 const TABS = [
   { name: 'index',    label: 'Home',    icon: 'home'         as const, iconOutline: 'home-outline'         as const },
-  { name: 'generate', label: 'Create',  icon: 'add-circle'   as const, iconOutline: 'add-circle-outline'   as const },
   { name: 'plan',     label: 'Plan',    icon: 'locate'       as const, iconOutline: 'locate-outline'       as const },
+  { name: 'generate', label: 'Create',  icon: 'add-circle'   as const, iconOutline: 'add-circle-outline'   as const },
   { name: 'library',  label: 'Library', icon: 'book'         as const, iconOutline: 'book-outline'         as const },
   { name: 'profile',  label: 'Profile', icon: 'person'       as const, iconOutline: 'person-outline'       as const },
 ];
@@ -28,6 +29,7 @@ function RegularTabItem({
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { impact } = useHaptic();
 
   const handlePressIn = () => {
     Animated.timing(scaleAnim, {
@@ -35,9 +37,7 @@ function RegularTabItem({
       duration: 100,
       useNativeDriver: true,
     }).start();
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    impact();
   };
 
   const handlePressOut = () => {
@@ -116,6 +116,7 @@ function CreateTabItem({
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { impact } = useHaptic();
 
   const handlePressIn = () => {
     Animated.timing(scaleAnim, {
@@ -123,9 +124,7 @@ function CreateTabItem({
       duration: 100,
       useNativeDriver: true,
     }).start();
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    impact(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handlePressOut = () => {
@@ -143,6 +142,7 @@ function CreateTabItem({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={{
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: -28,
@@ -177,7 +177,7 @@ function CreateTabItem({
               ...SHADOWS.primary,
             }}
           >
-            <Ionicons name="add" size={28} color="#FFFFFF" />
+            <Ionicons name="add" size={28} color={colors.textOnPrimary} />
           </View>
         </View>
         <Text
@@ -227,6 +227,7 @@ export function CustomTabBar({ state, navigation }: any) {
     >
       <View
         style={{
+          flex: 1,
           flexDirection: 'row',
           alignItems: 'stretch',
           height: TAB_BAR_HEIGHT,

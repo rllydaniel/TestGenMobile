@@ -5,13 +5,12 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInView } from '@/components/ui/FadeInView';
-import * as Haptics from 'expo-haptics';
+import { useHaptic } from '@/hooks/useHaptic';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -243,11 +242,7 @@ export default function StudyScreen() {
 
   /* ---------- callbacks ---------- */
 
-  const haptic = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  }, []);
+  const { impact: haptic } = useHaptic();
 
   const handleCreateDeck = useCallback(() => {
     haptic();

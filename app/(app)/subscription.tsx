@@ -1,15 +1,16 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useHaptic } from '@/hooks/useHaptic';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 
@@ -75,9 +76,7 @@ export default function SubscriptionScreen() {
   const { colors } = useTheme();
   const currentTier = subscription?.tier ?? 'free';
 
-  const handleHaptic = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, []);
+  const { impact: handleHaptic } = useHaptic();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
@@ -93,7 +92,7 @@ export default function SubscriptionScreen() {
         <View style={{ alignItems: 'flex-start', marginBottom: SPACING.lg }}>
           <Pressable
             onPress={() => router.back()}
-            onPressIn={handleHaptic}
+            onPressIn={() => handleHaptic()}
             style={({ pressed }) => ({
               minHeight: 44,
               justifyContent: 'center',
@@ -192,7 +191,7 @@ export default function SubscriptionScreen() {
                       style={{
                         fontSize: FONT_SIZES.xs,
                         fontFamily: FONTS.sansBold,
-                        color: '#FFFFFF',
+                        color: colors.textOnPrimary,
                         lineHeight: FONT_SIZES.xs * 1.4,
                       }}
                       numberOfLines={1}
@@ -215,7 +214,7 @@ export default function SubscriptionScreen() {
                     style={{
                       fontSize: FONT_SIZES.lg,
                       fontFamily: FONTS.sansBold,
-                      color: isPremium ? '#FFFFFF' : plan.color,
+                      color: isPremium ? colors.textOnPrimary : plan.color,
                       lineHeight: FONT_SIZES.lg * 1.3,
                       flex: 1,
                     }}
@@ -228,7 +227,7 @@ export default function SubscriptionScreen() {
                       style={{
                         fontSize: FONT_SIZES.xxl,
                         fontFamily: FONTS.displayBold,
-                        color: isPremium ? '#FFFFFF' : colors.textPrimary,
+                        color: isPremium ? colors.textOnPrimary : colors.textPrimary,
                         lineHeight: FONT_SIZES.xxl * 1.2,
                       }}
                       numberOfLines={1}
@@ -280,14 +279,14 @@ export default function SubscriptionScreen() {
                         <Ionicons
                           name="checkmark"
                           size={14}
-                          color={isPremium ? '#FFFFFF' : plan.color}
+                          color={isPremium ? colors.textOnPrimary : plan.color}
                         />
                       </View>
                       <Text
                         style={{
                           fontSize: FONT_SIZES.sm + 1,
                           fontFamily: FONTS.sansRegular,
-                          color: isPremium ? '#FFFFFF' : colors.textPrimary,
+                          color: isPremium ? colors.textOnPrimary : colors.textPrimary,
                           lineHeight: (FONT_SIZES.sm + 1) * 1.5,
                           flex: 1,
                         }}
@@ -302,9 +301,21 @@ export default function SubscriptionScreen() {
                 {/* CTA Button */}
                 <Pressable
                   onPress={() => {
-                    /* TODO: RevenueCat purchase flow */
+                    if (isCurrent) return;
+                    if (plan.id === 'free') {
+                      Alert.alert(
+                        'Downgrade',
+                        'To downgrade your plan, please manage your subscription through the App Store or Google Play.',
+                      );
+                    } else {
+                      Alert.alert(
+                        'Coming Soon',
+                        `In-app subscriptions are launching soon. You'll be able to subscribe to ${plan.name} directly from here.`,
+                        [{ text: 'OK' }],
+                      );
+                    }
                   }}
-                  onPressIn={handleHaptic}
+                  onPressIn={() => handleHaptic()}
                   disabled={isCurrent}
                   style={({ pressed }) => ({
                     minHeight: 44,
@@ -314,14 +325,14 @@ export default function SubscriptionScreen() {
                     paddingVertical: SPACING.sm + 4,
                     opacity: isCurrent ? 0.5 : pressed ? 0.82 : 1,
                     transform: [{ scale: pressed && !isCurrent ? 0.98 : 1 }],
-                    backgroundColor: isPremium ? '#FFFFFF' : plan.color,
+                    backgroundColor: isPremium ? colors.textOnPrimary : plan.color,
                   })}
                 >
                   <Text
                     style={{
                       fontSize: FONT_SIZES.base,
                       fontFamily: FONTS.sansBold,
-                      color: isPremium ? plan.color : '#FFFFFF',
+                      color: isPremium ? plan.color : colors.textOnPrimary,
                       lineHeight: FONT_SIZES.base * 1.3,
                     }}
                     numberOfLines={1}

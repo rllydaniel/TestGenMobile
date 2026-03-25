@@ -15,7 +15,7 @@ import { SectionLabel } from '@/components/ui/Label';
 import { useAppStore } from '@/stores/app-store';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
-import * as Haptics from 'expo-haptics';
+import { useHaptic } from '@/hooks/useHaptic';
 
 const THEME_OPTIONS = [
   {
@@ -43,6 +43,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { colors, preference, setPreference } = useTheme();
+  const { impact } = useHaptic();
   const { soundEnabled, setSoundEnabled, hapticEnabled, setHapticEnabled } =
     useAppStore();
 
@@ -60,7 +61,7 @@ export default function SettingsScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Pressable
             onPress={() => router.back()}
-            onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            onPressIn={() => impact()}
             style={({ pressed }) => ({
               minHeight: 44,
               justifyContent: 'center',
@@ -94,7 +95,7 @@ export default function SettingsScreen() {
                 <Pressable
                   key={opt.key}
                   onPress={() => setPreference(opt.key)}
-                  onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                  onPressIn={() => impact()}
                   style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -160,7 +161,7 @@ export default function SettingsScreen() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      <Ionicons name="checkmark" size={16} color={colors.textOnPrimary} />
                     </View>
                   )}
                 </Pressable>
@@ -243,6 +244,7 @@ function SettingToggle({
   onToggle: (v: boolean) => void;
   colors: any;
 }) {
+  const { impact } = useHaptic();
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <Text
@@ -259,7 +261,7 @@ function SettingToggle({
       </Text>
       <Pressable
         onPress={() => onToggle(!value)}
-        onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+        onPressIn={() => impact()}
         style={({ pressed }) => ({
           width: 52,
           height: 30,
@@ -295,10 +297,11 @@ function SettingLink({
   onPress: () => void;
   colors: any;
 }) {
+  const { impact } = useHaptic();
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+      onPressIn={() => impact()}
       style={({ pressed }) => ({
         flexDirection: 'row',
         justifyContent: 'space-between',

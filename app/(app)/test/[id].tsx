@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { FadeInView } from '@/components/ui/FadeInView';
+import { useHaptic } from '@/hooks/useHaptic';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { MathRenderer } from '@/components/ui/MathRenderer';
@@ -59,12 +60,13 @@ const AnswerOption = React.memo<AnswerOptionProps>(function AnswerOption({
   letter, text, index, state, onSelect, disabled,
 }) {
   const { colors } = useTheme();
+  const { impact } = useHaptic();
 
   const handlePress = useCallback(() => {
     if (disabled) return;
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact();
     onSelect();
-  }, [onSelect, disabled]);
+  }, [onSelect, disabled, impact]);
 
   const isSelected = state === 'selected';
   const isCorrect = state === 'correct';
@@ -190,6 +192,7 @@ export default function TestTakingScreen() {
   const params = useLocalSearchParams<{ id: string; returnTo?: string; diagnosticSetup?: string }>();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { impact } = useHaptic();
 
   // Session loading state
   const [session, setSession] = useState<TestSession | null>(null);
@@ -304,7 +307,7 @@ export default function TestTakingScreen() {
   }, [currentQuestion]);
 
   const handleToggleFlag = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact();
     setFlaggedQuestions((prev) => {
       const next = new Set(prev);
       if (next.has(currentQuestion)) next.delete(currentQuestion);
@@ -320,7 +323,7 @@ export default function TestTakingScreen() {
   const handleNext = useCallback(() => {
     if (isLastQuestion) {
       setShowSubmitSheet(true);
-      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      impact(Haptics.ImpactFeedbackStyle.Medium);
     } else {
       animateTransition(() => setCurrentQuestion((prev) => prev + 1));
     }
@@ -366,12 +369,12 @@ export default function TestTakingScreen() {
 
       setShowSubmitSheet(false);
       if (params.returnTo === 'plan/results') {
-        router.replace({
+        router.push({
           pathname: '/(app)/plan/results',
           params: { sessionId: session.id, diagnosticSetup: params.diagnosticSetup ?? '' },
         });
       } else {
-        router.replace({
+        router.push({
           pathname: '/(app)/test/results/[id]',
           params: { id: session.id },
         });

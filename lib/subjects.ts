@@ -8,6 +8,7 @@ export interface Subject {
   name: string;
   icon: string;
   color: string;
+  coverImage: string;
   topics: SubjectTopic[];
 }
 
@@ -17,6 +18,7 @@ export const subjects: Subject[] = [
     name: 'SAT',
     icon: 'school',
     color: '#6C5CE7',
+    coverImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b6f71?w=600&q=80',
     topics: [
       { id: 'sat-reading', name: 'Reading Comprehension' },
       { id: 'sat-writing', name: 'Writing & Language' },
@@ -34,6 +36,7 @@ export const subjects: Subject[] = [
     name: 'ACT',
     icon: 'school',
     color: '#E84393',
+    coverImage: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=600&q=80',
     topics: [
       { id: 'act-english', name: 'English' },
       { id: 'act-math', name: 'Mathematics' },
@@ -47,6 +50,7 @@ export const subjects: Subject[] = [
     name: 'AP Biology',
     icon: 'leaf',
     color: '#00B894',
+    coverImage: 'https://images.unsplash.com/photo-1530026186672-2cd00ffc50fe?w=600&q=80',
     topics: [
       { id: 'ap-bio-cells', name: 'Cell Structure & Function' },
       { id: 'ap-bio-genetics', name: 'Genetics & Heredity' },
@@ -62,6 +66,7 @@ export const subjects: Subject[] = [
     name: 'AP Chemistry',
     icon: 'flask',
     color: '#00CEC9',
+    coverImage: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?w=600&q=80',
     topics: [
       { id: 'ap-chem-atomic', name: 'Atomic Structure' },
       { id: 'ap-chem-bonding', name: 'Chemical Bonding' },
@@ -77,6 +82,7 @@ export const subjects: Subject[] = [
     name: 'AP Physics 1',
     icon: 'atom',
     color: '#0984E3',
+    coverImage: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=600&q=80',
     topics: [
       { id: 'ap-phys1-kinematics', name: 'Kinematics' },
       { id: 'ap-phys1-dynamics', name: 'Dynamics (Forces)' },
@@ -92,6 +98,7 @@ export const subjects: Subject[] = [
     name: 'AP US History',
     icon: 'flag',
     color: '#D63031',
+    coverImage: 'https://images.unsplash.com/photo-1501139083538-0139583c060f?w=600&q=80',
     topics: [
       { id: 'ap-ush-colonial', name: 'Colonial America' },
       { id: 'ap-ush-revolution', name: 'American Revolution' },
@@ -108,6 +115,7 @@ export const subjects: Subject[] = [
     name: 'AP World History',
     icon: 'globe',
     color: '#E17055',
+    coverImage: 'https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?w=600&q=80',
     topics: [
       { id: 'ap-wh-ancient', name: 'Ancient Civilizations' },
       { id: 'ap-wh-classical', name: 'Classical Era' },
@@ -122,6 +130,7 @@ export const subjects: Subject[] = [
     name: 'AP Psychology',
     icon: 'brain',
     color: '#A29BFE',
+    coverImage: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80',
     topics: [
       { id: 'ap-psych-bio', name: 'Biological Bases of Behavior' },
       { id: 'ap-psych-sensation', name: 'Sensation & Perception' },
@@ -137,6 +146,7 @@ export const subjects: Subject[] = [
     name: 'AP English Language',
     icon: 'book',
     color: '#FDCB6E',
+    coverImage: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600&q=80',
     topics: [
       { id: 'ap-eng-rhetoric', name: 'Rhetorical Analysis' },
       { id: 'ap-eng-argument', name: 'Argumentation' },
@@ -149,6 +159,7 @@ export const subjects: Subject[] = [
     name: 'AP Calculus AB',
     icon: 'calculator',
     color: '#74B9FF',
+    coverImage: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&q=80',
     topics: [
       { id: 'ap-calc-limits', name: 'Limits & Continuity' },
       { id: 'ap-calc-derivatives', name: 'Derivatives' },
@@ -162,6 +173,7 @@ export const subjects: Subject[] = [
     name: 'Algebra 1',
     icon: 'calculator',
     color: '#0984E3',
+    coverImage: 'https://images.unsplash.com/photo-1635070041409-e63e783ce3c1?w=600&q=80',
     topics: [
       { id: 'alg1-linear', name: 'Linear Equations' },
       { id: 'alg1-inequalities', name: 'Inequalities' },
@@ -175,6 +187,7 @@ export const subjects: Subject[] = [
     name: 'Algebra 2',
     icon: 'calculator',
     color: '#6C5CE7',
+    coverImage: 'https://images.unsplash.com/photo-1596495578065-6e0763fa1178?w=600&q=80',
     topics: [
       { id: 'alg2-complex', name: 'Complex Numbers' },
       { id: 'alg2-polynomials', name: 'Polynomial Functions' },
@@ -188,6 +201,7 @@ export const subjects: Subject[] = [
     name: 'Geometry',
     icon: 'shapes',
     color: '#00CEC9',
+    coverImage: 'https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=600&q=80',
     topics: [
       { id: 'geo-triangles', name: 'Triangles & Congruence' },
       { id: 'geo-circles', name: 'Circles' },
@@ -201,6 +215,7 @@ export const subjects: Subject[] = [
     name: 'Biology',
     icon: 'leaf',
     color: '#00B894',
+    coverImage: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=600&q=80',
     topics: [
       { id: 'bio-cells', name: 'Cell Biology' },
       { id: 'bio-genetics', name: 'Genetics' },
@@ -214,6 +229,7 @@ export const subjects: Subject[] = [
     name: 'Chemistry',
     icon: 'flask',
     color: '#00CEC9',
+    coverImage: 'https://images.unsplash.com/photo-1507668339897-8a035aa9527d?w=600&q=80',
     topics: [
       { id: 'chem-matter', name: 'Matter & Atomic Theory' },
       { id: 'chem-periodic-table', name: 'Periodic Table' },
@@ -227,6 +243,7 @@ export const subjects: Subject[] = [
     name: 'Physics',
     icon: 'atom',
     color: '#0984E3',
+    coverImage: 'https://images.unsplash.com/photo-1617791160536-598cf32026fb?w=600&q=80',
     topics: [
       { id: 'phys-motion', name: 'Motion & Forces' },
       { id: 'phys-energy', name: 'Energy & Work' },
@@ -240,6 +257,7 @@ export const subjects: Subject[] = [
     name: 'US History',
     icon: 'flag',
     color: '#D63031',
+    coverImage: 'https://images.unsplash.com/photo-1508812676971-bc3f3aa24da0?w=600&q=80',
     topics: [
       { id: 'ush-colonial', name: 'Colonial Period' },
       { id: 'ush-revolution', name: 'American Revolution' },
@@ -253,6 +271,7 @@ export const subjects: Subject[] = [
     name: 'World History',
     icon: 'globe',
     color: '#E17055',
+    coverImage: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=600&q=80',
     topics: [
       { id: 'wh-ancient', name: 'Ancient Civilizations' },
       { id: 'wh-medieval', name: 'Medieval Period' },
@@ -265,6 +284,7 @@ export const subjects: Subject[] = [
     name: 'Statistics',
     icon: 'bar-chart',
     color: '#636E72',
+    coverImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80',
     topics: [
       { id: 'stats-descriptive', name: 'Descriptive Statistics' },
       { id: 'stats-probability', name: 'Probability' },
@@ -278,6 +298,7 @@ export const subjects: Subject[] = [
     name: 'Computer Science',
     icon: 'code',
     color: '#2D3436',
+    coverImage: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&q=80',
     topics: [
       { id: 'cs-algorithms', name: 'Algorithms' },
       { id: 'cs-data-structures', name: 'Data Structures' },
@@ -291,6 +312,7 @@ export const subjects: Subject[] = [
     name: 'Spanish',
     icon: 'language',
     color: '#E84393',
+    coverImage: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=600&q=80',
     topics: [
       { id: 'span-grammar', name: 'Grammar' },
       { id: 'span-vocabulary', name: 'Vocabulary' },
@@ -303,6 +325,7 @@ export const subjects: Subject[] = [
     name: 'French',
     icon: 'language',
     color: '#0984E3',
+    coverImage: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=80',
     topics: [
       { id: 'fr-grammar', name: 'Grammar' },
       { id: 'fr-vocabulary', name: 'Vocabulary' },
@@ -315,6 +338,7 @@ export const subjects: Subject[] = [
     name: 'Economics',
     icon: 'trending-up',
     color: '#FDCB6E',
+    coverImage: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&q=80',
     topics: [
       { id: 'econ-micro', name: 'Microeconomics' },
       { id: 'econ-macro', name: 'Macroeconomics' },
@@ -327,6 +351,7 @@ export const subjects: Subject[] = [
     name: 'English',
     icon: 'book',
     color: '#FDCB6E',
+    coverImage: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&q=80',
     topics: [
       { id: 'eng-grammar', name: 'Grammar & Usage' },
       { id: 'eng-reading', name: 'Reading Comprehension' },

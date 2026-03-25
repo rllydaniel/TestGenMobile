@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -179,15 +180,27 @@ export default function StudyGuidesScreen() {
               }
             >
               <Card padding="none" style={{ backgroundColor: colors.surface }}>
-                {/* Colored top band */}
-                <View
-                  style={{
-                    height: 4,
-                    backgroundColor: item.color,
-                    borderTopLeftRadius: RADIUS.lg,
-                    borderTopRightRadius: RADIUS.lg,
-                  }}
-                />
+                {/* Cover image or colored band */}
+                {item.coverImage ? (
+                  <Image
+                    source={{ uri: item.coverImage }}
+                    style={{
+                      height: 100,
+                      borderTopLeftRadius: RADIUS.lg,
+                      borderTopRightRadius: RADIUS.lg,
+                    }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      height: 4,
+                      backgroundColor: item.color,
+                      borderTopLeftRadius: RADIUS.lg,
+                      borderTopRightRadius: RADIUS.lg,
+                    }}
+                  />
+                )}
                 <View style={styles.subjectCardInner}>
                   <View style={[styles.iconCircle, { backgroundColor: item.color + '20' }]}>
                     <Ionicons
