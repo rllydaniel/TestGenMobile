@@ -22,12 +22,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log('[Auth] Session restored on boot. User:', session.user?.id,
+          '| Token prefix:', session.access_token?.slice(0, 20) + '...',
+          '| Expires at:', session.expires_at);
+      } else {
+        console.log('[Auth] No session on boot — user is not logged in');
+      }
       setSession(session);
       setIsLoaded(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        console.log('[Auth] State change:', event,
+          '| User:', session?.user?.id ?? 'none',
+          '| Token prefix:', session?.access_token?.slice(0, 20) ?? 'none');
         setSession(session);
       }
     );
@@ -36,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    console.log('[Auth] Signing out...');
     await supabase.auth.signOut();
   };
 

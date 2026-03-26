@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/api/edgeFunctions';
 import { useCreatePlan } from '@/hooks/usePlan';
 import { TypingText } from '@/components/ui/TypingText';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS, getScoreColor } from '@/constants/theme';
@@ -199,7 +200,8 @@ export default function PlanResultsScreen() {
 
         // AI assessment
         try {
-          const { data: fnData } = await supabase.functions.invoke('summarize-test', {
+          const fnData = await callEdgeFunction<{ summary?: string }>({
+            functionName: 'summarize-test',
             body: {
               subject: data.subject ?? setup.subject ?? 'General',
               scorePct: sessionScore,
@@ -230,7 +232,8 @@ export default function PlanResultsScreen() {
 
     try {
       // Call generate-study-plan edge function
-      const { data: planData, error: fnErr } = await supabase.functions.invoke('generate-study-plan', {
+      const planData = await callEdgeFunction<Record<string, any>>({
+        functionName: 'generate-study-plan',
         body: {
           subject: setup.subject ?? 'General',
           targetExam: setup.targetExam ?? setup.subject ?? 'General',
@@ -243,8 +246,6 @@ export default function PlanResultsScreen() {
           topicBreakdown: topicBars,
         },
       });
-
-      if (fnErr) throw fnErr;
 
       const plan = await createPlan.mutateAsync({
         subject: setup.subject ?? 'General',

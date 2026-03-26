@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/Button';
 import { TypingText } from '@/components/ui/TypingText';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/api/edgeFunctions';
 import type { TestQuestion } from '@/lib/api/generateTest';
 import {
   FONTS,
@@ -201,7 +202,8 @@ function AISummaryCard({ session, computed }: { session: CompletedSession; compu
   const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('summarize-test', {
+      const data = await callEdgeFunction<{ summary?: string }>({
+        functionName: 'summarize-test',
         body: {
           subject: session.subject,
           scorePct: computed.scorePct,
@@ -211,7 +213,6 @@ function AISummaryCard({ session, computed }: { session: CompletedSession; compu
           difficulty: session.difficulty,
         },
       });
-      if (error) throw error;
       setSummaryText(data?.summary ?? null);
     } catch {
       setSummaryText(null);

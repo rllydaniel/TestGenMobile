@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useHaptic } from '@/hooks/useHaptic';
-import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/api/edgeFunctions';
 import { useTutorMessages, useSendTutorMessage } from '@/hooks/useTutor';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 import type { TutorMessage } from '@/types/tutor';
@@ -152,14 +152,13 @@ export default function TutorChatScreen() {
         });
 
         // Call AI tutor edge function
-        const { data: aiData, error: fnErr } = await supabase.functions.invoke('ai-tutor', {
+        const aiData = await callEdgeFunction<{ reply?: string }>({
+          functionName: 'ai-tutor',
           body: {
             sessionId: params.sessionId,
             message: trimmed,
           },
         });
-
-        if (fnErr) throw fnErr;
 
         const reply = aiData?.reply ?? "I'm not sure about that. Could you rephrase your question?";
 

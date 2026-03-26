@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/api/edgeFunctions';
 
 export interface GenerateExplanationParams {
   questionText: string;
@@ -21,7 +21,8 @@ export interface ExplanationResult {
 export async function generateExplanation(
   params: GenerateExplanationParams,
 ): Promise<ExplanationResult> {
-  const { data, error } = await supabase.functions.invoke('generate-explanation', {
+  const data = await callEdgeFunction<{ explanation: string; key_concept_links?: string[] }>({
+    functionName: 'generate-explanation',
     body: {
       question: params.questionText,
       correct_answer: params.correctAnswer,
@@ -32,7 +33,6 @@ export async function generateExplanation(
     },
   });
 
-  if (error) throw new Error(error.message);
   if (!data?.explanation) throw new Error('No explanation returned');
 
   return {

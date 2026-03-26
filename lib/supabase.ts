@@ -4,6 +4,18 @@ import * as SecureStore from 'expo-secure-store';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
+// ── Startup env validation ────────────────────────────────────────────────────
+if (!supabaseUrl) {
+  console.error('[Config] ERROR: EXPO_PUBLIC_SUPABASE_URL is undefined!');
+} else {
+  console.log('[Config] Supabase URL:', supabaseUrl);
+}
+if (!supabaseAnonKey) {
+  console.error('[Config] ERROR: EXPO_PUBLIC_SUPABASE_ANON_KEY is undefined!');
+} else {
+  console.log('[Config] Anon key prefix:', supabaseAnonKey.slice(0, 10) + '...');
+}
+
 const secureStoreAdapter = {
   getItem: async (key: string) => {
     try {
@@ -29,6 +41,13 @@ const secureStoreAdapter = {
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    // Explicitly set apikey on every request so Supabase infra never sees an
+    // empty apikey header (seen as `"apikey": []` in edge function logs).
+    headers: {
+      apikey: supabaseAnonKey,
+    },
+  },
   auth: {
     storage: secureStoreAdapter,
     autoRefreshToken: true,
@@ -36,3 +55,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+console.log('[Supabase] Client initialized');

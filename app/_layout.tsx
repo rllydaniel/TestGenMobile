@@ -63,6 +63,15 @@ function ThemedStatusBar() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    console.log('[Config] Supabase URL:', url ?? 'UNDEFINED');
+    console.log('[Config] Anon key prefix:', key ? key.slice(0, 10) + '...' : 'UNDEFINED');
+    if (!url) console.error('[Config] ERROR: EXPO_PUBLIC_SUPABASE_URL is undefined!');
+    if (!key) console.error('[Config] ERROR: EXPO_PUBLIC_SUPABASE_ANON_KEY is undefined!');
+  }, []);
+
   const [fontsLoaded, fontError] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     DMSans_400Regular,

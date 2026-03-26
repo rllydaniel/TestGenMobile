@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/api/edgeFunctions';
 
 export interface TutorMessage {
   role: 'user' | 'assistant';
@@ -26,7 +26,8 @@ export async function sendTutorMessage(
 ): Promise<AiTutorResult> {
   const systemPrompt = buildSystemPrompt(params);
 
-  const { data, error } = await supabase.functions.invoke('ai-tutor', {
+  const data = await callEdgeFunction<{ response: string; suggested_follow_ups?: string[] }>({
+    functionName: 'ai-tutor',
     body: {
       messages: params.messages,
       system_prompt: systemPrompt,
@@ -34,7 +35,6 @@ export async function sendTutorMessage(
     },
   });
 
-  if (error) throw new Error(error.message);
   if (!data?.response) throw new Error('No response from tutor');
 
   return {
