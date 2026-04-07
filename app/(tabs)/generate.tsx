@@ -31,10 +31,10 @@ const CATEGORIES: Category[] = [
   {
     key: 'standardized',
     label: 'Standardized Tests',
-    description: 'SAT, ACT, and other college admissions tests',
+    description: 'SAT, ACT, GRE, MCAT, and more',
     icon: 'school-outline',
     colorKey: 'categoryStandardized',
-    filter: (id) => id === 'sat' || id === 'act',
+    filter: (id) => ['sat', 'act', 'gre', 'gmat', 'mcat', 'lsat', 'toefl', 'ielts'].includes(id),
   },
   {
     key: 'ap',
@@ -50,7 +50,7 @@ const CATEGORIES: Category[] = [
     description: 'Algebra, calculus, statistics, and more',
     icon: 'calculator-outline',
     colorKey: 'categoryMath',
-    filter: (id) => ['math', 'algebra', 'calculus', 'statistics', 'geometry'].some((k) => id.includes(k)),
+    filter: (id) => ['math', 'algebra', 'calculus', 'statistics', 'geometry', 'trigonometry', 'pre-calculus', 'linear-algebra', 'discrete'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
   },
   {
     key: 'science',
@@ -58,23 +58,23 @@ const CATEGORIES: Category[] = [
     description: 'Biology, chemistry, physics, and more',
     icon: 'flask-outline',
     colorKey: 'categoryScience',
-    filter: (id) => ['biology', 'chemistry', 'physics', 'science'].some((k) => id.includes(k)),
+    filter: (id) => ['biology', 'chemistry', 'physics', 'anatomy', 'microbiology', 'biochemistry', 'organic'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
   },
   {
     key: 'humanities',
     label: 'Humanities',
-    description: 'History, literature, philosophy, and more',
+    description: 'History, literature, economics, and more',
     icon: 'book-outline',
     colorKey: 'categoryHumanities',
-    filter: (id) => ['history', 'english', 'literature', 'psychology'].some((k) => id.includes(k)),
+    filter: (id) => ['history', 'english', 'psychology', 'economics'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
   },
   {
     key: 'languages',
     label: 'Languages',
-    description: 'Spanish, French, Latin, and other languages',
+    description: 'Spanish, French, Japanese, and more',
     icon: 'chatbubble-outline',
     colorKey: 'categoryLanguages',
-    filter: (id) => ['spanish', 'french', 'latin', 'language'].some((k) => id.includes(k)),
+    filter: (id) => ['spanish', 'french', 'german', 'mandarin', 'japanese', 'latin', 'italian', 'portuguese', 'korean', 'arabic'].some((k) => id.includes(k)),
   },
 ];
 

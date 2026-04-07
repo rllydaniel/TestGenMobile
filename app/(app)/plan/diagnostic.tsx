@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   },
   markText: {
     fontSize: 28,
-    fontFamily: FONTS.displayBold,
+    fontFamily: FONTS.sansBold,
     includeFontPadding: false,
   },
   heading: {

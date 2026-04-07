@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { RevenueCatProvider } from '@/lib/revenueCat';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
 import { ToastProvider } from '@/components/ui/Toast';
@@ -99,12 +100,14 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AuthProvider>
-          <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-              <ThemedStatusBar />
-              <AuthGate />
-            </ToastProvider>
-          </QueryClientProvider>
+          <RevenueCatProvider>
+            <QueryClientProvider client={queryClient}>
+              <ToastProvider>
+                <ThemedStatusBar />
+                <AuthGate />
+              </ToastProvider>
+            </QueryClientProvider>
+          </RevenueCatProvider>
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

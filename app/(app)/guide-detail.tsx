@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,90 +8,68 @@ import {
   StyleSheet,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/Button';
+import { StudyGuideRenderer } from '@/components/ui/StudyGuideRenderer';
+import { StudyGuideChat } from '@/components/ui/StudyGuideChat';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { subjects } from '@/lib/subjects';
+import {
+  useStudyGuide,
+  useGenerateStudyGuide,
+  StudyGuideSection,
+} from '@/hooks/useStudyGuide';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 
-// -- Mock guide data --
-interface GuideSection {
-  id: string;
-  title: string;
-  paragraphs: string[];
-  callout?: string;
-  bullets?: string[];
-}
-
-const MOCK_SECTIONS: GuideSection[] = [
-  {
-    id: 'overview',
-    title: 'Overview & Key Concepts',
-    paragraphs: [
-      'This study guide covers the essential concepts you need to master for your exam. Each section is structured to build on the previous one, taking you from foundational ideas to advanced problem-solving techniques.',
-      'Before diving into specific topics, make sure you have a solid understanding of the prerequisite material. Review any areas where you feel uncertain, as later sections assume comfort with earlier concepts.',
-      'Research shows that active recall and spaced repetition are the most effective study strategies. As you read through this guide, pause frequently to test yourself on what you have just learned rather than passively re-reading.',
-    ],
-    callout:
-      'Study tip: Read each section once, then close the guide and try to recall the main points from memory. This single technique can improve retention by up to 50%.',
-    bullets: [
-      'Focus on understanding concepts, not memorizing formulas',
-      'Practice with timed problems to build exam-day confidence',
-      'Review mistakes carefully — they reveal your weak spots',
-      'Use the "Quiz Me" feature after each section for active recall',
-    ],
-  },
-  {
-    id: 'core-strategies',
-    title: 'Core Strategies & Techniques',
-    paragraphs: [
-      'Effective problem solving begins with a systematic approach. Before attempting any question, take a moment to identify what type of problem it is and which strategy applies. This saves time and reduces careless errors.',
-      'Elimination is one of the most powerful test-taking strategies. On multiple-choice questions, start by ruling out answers you know are wrong. Even eliminating one option significantly improves your odds if you need to make an educated guess.',
-      'Time management is critical. Allocate your time based on point values and difficulty. Do not spend five minutes on a single question when that time could earn you points on three easier ones. Mark difficult questions and return to them after completing the rest.',
-    ],
-    callout:
-      'Pro tip: On standardized tests, every question is worth the same number of points. Answer the easy ones first to lock in guaranteed points, then tackle harder questions with remaining time.',
-    bullets: [
-      'Read the entire question before looking at answer choices',
-      'Underline key words like "NOT", "EXCEPT", and "ALWAYS"',
-      'Show your work — it helps catch errors and earns partial credit',
-      'Double-check units and labels in your final answers',
-    ],
-  },
-  {
-    id: 'practice-review',
-    title: 'Practice & Review Methods',
-    paragraphs: [
-      'The final stage of preparation is structured practice. Take full-length practice tests under realistic conditions: timed, no notes, and in a quiet environment. This builds both your skills and your stamina for test day.',
-      'After each practice test, conduct a thorough review. For every question you missed, identify whether the error was conceptual (you did not understand the material), procedural (you knew the concept but made a mistake), or careless (you understood everything but rushed). Each type of error requires a different fix.',
-      'In the days before your exam, focus on review rather than learning new material. Revisit your notes, redo problems you previously got wrong, and make sure you are comfortable with the test format. Confidence on test day comes from thorough preparation.',
-    ],
-    callout:
-      'Remember: Consistency beats intensity. Studying 30 minutes every day for two weeks is far more effective than cramming for 7 hours the night before. Start early and build a study schedule you can stick with.',
-  },
-];
-
-// -- Component --
 export default function GuideDetailScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { subjectId } = useLocalSearchParams<{ subjectId: string }>();
+  const { subjectId, unit } = useLocalSearchParams<{ subjectId: string; unit?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const tocScrollRef = useRef<ScrollView>(null);
 
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0];
-  const [activeSection, setActiveSection] = useState(MOCK_SECTIONS[0].id);
+  const { data: cachedGuide, isLoading: loadingCache } = useStudyGuide(subject.id, unit);
+  const generateGuide = useGenerateStudyGuide();
+
+  const [sections, setSections] = useState<StudyGuideSection[]>([]);
+  const [activeSection, setActiveSection] = useState('');
+  const [chatVisible, setChatVisible] = useState(false);
   const sectionOffsets = useRef<Record<string, number>>({});
+
+  // Load cached or generate
+  useEffect(() => {
+    if (loadingCache) return;
+    if (cachedGuide?.content && Array.isArray(cachedGuide.content) && cachedGuide.content.length > 0) {
+      setSections(cachedGuide.content);
+      setActiveSection(cachedGuide.content[0]?.id ?? '');
+    } else if (!generateGuide.isPending && sections.length === 0) {
+      generateGuide.mutate(
+        { subject: subject.id, unit, topics: subject.topics.map((t) => t.name) },
+        {
+          onSuccess: (data) => {
+            setSections(data);
+            if (data.length > 0) setActiveSection(data[0].id);
+          },
+        }
+      );
+    }
+  }, [loadingCache, cachedGuide]);
+
+  const isGenerating = generateGuide.isPending || (loadingCache && sections.length === 0);
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (sections.length === 0) return;
       const y = e.nativeEvent.contentOffset.y + 120;
-      let current = MOCK_SECTIONS[0].id;
-      for (const section of MOCK_SECTIONS) {
+      let current = sections[0].id;
+      for (const section of sections) {
         const offset = sectionOffsets.current[section.id];
         if (offset !== undefined && y >= offset) {
           current = section.id;
@@ -101,7 +79,7 @@ export default function GuideDetailScreen() {
         setActiveSection(current);
       }
     },
-    [activeSection],
+    [activeSection, sections],
   );
 
   const scrollToSection = useCallback((sectionId: string) => {
@@ -121,7 +99,7 @@ export default function GuideDetailScreen() {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={[styles.headerSubject, { color: colors.textPrimary }]} numberOfLines={1}>
-            {subject.name}
+            {subject.name}{unit ? ` — ${subject.topics.find(t => t.id === unit)?.name ?? unit}` : ''}
           </Text>
         </View>
         <Pressable style={styles.bookmarkBtn}>
@@ -130,41 +108,43 @@ export default function GuideDetailScreen() {
       </View>
 
       {/* Sticky table of contents pills */}
-      <View style={[styles.tocContainer, { borderBottomColor: colors.border, backgroundColor: colors.appBackground }]}>
-        <ScrollView
-          ref={tocScrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tocContent}
-        >
-          {MOCK_SECTIONS.map((section) => {
-            const isActive = activeSection === section.id;
-            return (
-              <Pressable
-                key={section.id}
-                onPress={() => scrollToSection(section.id)}
-                style={[
-                  styles.tocPill,
-                  {
-                    backgroundColor: isActive ? colors.primary : colors.surface,
-                    borderColor: isActive ? colors.primary : colors.border,
-                  },
-                ]}
-              >
-                <Text
+      {sections.length > 0 && (
+        <View style={[styles.tocContainer, { borderBottomColor: colors.border, backgroundColor: colors.appBackground }]}>
+          <ScrollView
+            ref={tocScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tocContent}
+          >
+            {sections.map((section) => {
+              const isActive = activeSection === section.id;
+              return (
+                <Pressable
+                  key={section.id}
+                  onPress={() => scrollToSection(section.id)}
                   style={[
-                    styles.tocPillText,
-                    { color: isActive ? colors.textOnPrimary : colors.textMuted },
+                    styles.tocPill,
+                    {
+                      backgroundColor: isActive ? colors.primary : colors.surface,
+                      borderColor: isActive ? colors.primary : colors.border,
+                    },
                   ]}
-                  numberOfLines={1}
                 >
-                  {section.title}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+                  <Text
+                    style={[
+                      styles.tocPillText,
+                      { color: isActive ? colors.textOnPrimary : colors.textMuted },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {section.title}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Scrollable body */}
       <ScrollView
@@ -184,12 +164,37 @@ export default function GuideDetailScreen() {
         ) : null}
 
         {/* Guide title */}
-        <Text style={[styles.guideTitle, { color: colors.textPrimary }]}>{subject.name} Study Guide</Text>
+        <Text style={[styles.guideTitle, { color: colors.textPrimary }]}>
+          {subject.name} Study Guide
+        </Text>
         <Text style={[styles.guideMeta, { color: colors.textMuted }]}>
-          {MOCK_SECTIONS.length} sections · {subject.topics.length} topics covered
+          {sections.length > 0 ? `${sections.length} sections` : 'Generating...'} · {subject.topics.length} topics covered
         </Text>
 
-        {MOCK_SECTIONS.map((section) => (
+        {/* Loading skeleton */}
+        {isGenerating && (
+          <View style={{ gap: SPACING.xl }}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={{ gap: SPACING.sm }}>
+                <Skeleton width="60%" height={22} />
+                <Skeleton width="100%" height={14} />
+                <Skeleton width="100%" height={14} />
+                <Skeleton width="85%" height={14} />
+                <Skeleton width="100%" height={14} />
+                <Skeleton width="70%" height={14} />
+              </View>
+            ))}
+            <View style={{ alignItems: 'center', paddingVertical: SPACING.lg }}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={{ fontFamily: FONTS.sansMedium, fontSize: FONT_SIZES.sm, color: colors.textMuted, marginTop: SPACING.sm }}>
+                Generating your study guide...
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Sections */}
+        {sections.map((section) => (
           <View
             key={section.id}
             onLayout={(e) => {
@@ -200,12 +205,8 @@ export default function GuideDetailScreen() {
             {/* Section header */}
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{section.title}</Text>
 
-            {/* Paragraphs */}
-            {section.paragraphs.map((para, idx) => (
-              <Text key={idx} style={[styles.paragraph, { color: colors.textMuted }]}>
-                {para}
-              </Text>
-            ))}
+            {/* Rich content with LaTeX + Markdown */}
+            <StudyGuideRenderer content={section.content} fontSize={15} />
 
             {/* Callout box */}
             {section.callout && (
@@ -217,13 +218,12 @@ export default function GuideDetailScreen() {
               </View>
             )}
 
-            {/* Bullet points */}
-            {section.bullets && section.bullets.length > 0 && (
-              <View style={styles.bulletList}>
-                {section.bullets.map((bullet, idx) => (
-                  <View key={idx} style={styles.bulletRow}>
-                    <View style={[styles.bulletDot, { backgroundColor: colors.primary }]} />
-                    <Text style={[styles.bulletText, { color: colors.textMuted }]}>{bullet}</Text>
+            {/* Key terms */}
+            {section.keyTerms && section.keyTerms.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACING.sm }}>
+                {section.keyTerms.map((term) => (
+                  <View key={term} style={{ backgroundColor: colors.surfaceSecondary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full }}>
+                    <Text style={{ fontFamily: FONTS.sansMedium, fontSize: FONT_SIZES.xs, color: colors.textMuted }}>{term}</Text>
                   </View>
                 ))}
               </View>
@@ -231,25 +231,68 @@ export default function GuideDetailScreen() {
           </View>
         ))}
 
-        {/* Bottom spacer for floating button */}
-        <View style={{ height: 100 }} />
+        {/* Error state */}
+        {generateGuide.isError && sections.length === 0 && (
+          <View style={{ alignItems: 'center', paddingVertical: SPACING.xl }}>
+            <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+            <Text style={{ fontFamily: FONTS.sansMedium, fontSize: FONT_SIZES.base, color: colors.textPrimary, marginTop: SPACING.sm }}>
+              Failed to generate study guide
+            </Text>
+            <Button
+              label="Retry"
+              onPress={() => generateGuide.mutate(
+                { subject: subject.id, unit, topics: subject.topics.map((t) => t.name) },
+                { onSuccess: (data) => { setSections(data); if (data.length > 0) setActiveSection(data[0].id); } }
+              )}
+              variant="outline"
+              size="sm"
+              style={{ marginTop: SPACING.md }}
+            />
+          </View>
+        )}
+
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Floating "Quiz Me on This" button */}
+      {/* Floating buttons */}
       <View style={[styles.floatingButtonContainer, { bottom: insets.bottom + SPACING.md }]}>
-        <Button
-          label="Quiz Me on This"
-          onPress={() =>
-            router.push({
-              pathname: '/(app)/test/setup',
-              params: { subjectId: subject.id },
-            } as any)
-          }
-          icon={<Ionicons name="help-circle" size={20} color={colors.textOnPrimary} />}
-          size="lg"
-          style={styles.floatingButton}
-        />
+        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+          {/* AI Chat button */}
+          <Pressable
+            onPress={() => setChatVisible(true)}
+            style={[
+              styles.chatFab,
+              { backgroundColor: colors.surface, borderColor: colors.border, ...SHADOWS.md },
+            ]}
+          >
+            <Ionicons name="sparkles" size={20} color={colors.primary} />
+          </Pressable>
+
+          {/* Quiz Me button */}
+          <View style={{ flex: 1 }}>
+            <Button
+              label="Quiz Me on This"
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/create/config',
+                  params: { subjectId: subject.id },
+                } as any)
+              }
+              icon={<Ionicons name="help-circle" size={20} color="#FFFFFF" />}
+              size="lg"
+              style={styles.floatingButton}
+            />
+          </View>
+        </View>
       </View>
+
+      {/* AI Chat sidebar */}
+      <StudyGuideChat
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+        subject={subject.name}
+        unit={unit ? subject.topics.find(t => t.id === unit)?.name : undefined}
+      />
     </View>
   );
 }
@@ -356,12 +399,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     lineHeight: FONT_SIZES.lg * 1.2,
   },
-  paragraph: {
-    fontSize: 16,
-    fontFamily: FONTS.sansRegular,
-    lineHeight: 16 * 1.6,
-    marginBottom: SPACING.md,
-  },
 
   // -- Callout --
   calloutBox: {
@@ -382,34 +419,19 @@ const styles = StyleSheet.create({
     lineHeight: (FONT_SIZES.sm + 1) * 1.6,
   },
 
-  // -- Bullets --
-  bulletList: {
-    marginTop: SPACING.sm,
-    gap: SPACING.sm,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.sm,
-  },
-  bulletDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 8,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: FONT_SIZES.base,
-    fontFamily: FONTS.sansRegular,
-    lineHeight: FONT_SIZES.base * 1.6,
-  },
-
-  // -- Floating Button --
+  // -- Floating Buttons --
   floatingButtonContainer: {
     position: 'absolute',
     left: SPACING.screenH,
     right: SPACING.screenH,
+  },
+  chatFab: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   floatingButton: {
     ...SHADOWS.primary,

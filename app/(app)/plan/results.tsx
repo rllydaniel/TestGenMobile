@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   heroLevel: {
     fontSize: FONT_SIZES.display,
-    fontFamily: FONTS.displayBold,
+    fontFamily: FONTS.sansBold,
     color: '#FFFFFF',
     includeFontPadding: false,
     lineHeight: FONT_SIZES.display * 1.1,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   },
   ringPct: {
     fontSize: FONT_SIZES.xl,
-    fontFamily: FONTS.displayBold,
+    fontFamily: FONTS.sansBold,
     includeFontPadding: false,
     textAlign: 'center',
   },

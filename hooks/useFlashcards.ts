@@ -36,7 +36,6 @@ export function useFlashcardDeck(deckId: string) {
 }
 
 export function useGenerateFlashcards() {
-  const supabase = useSupabase();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -47,7 +46,7 @@ export function useGenerateFlashcards() {
       subject: string;
       topics: string[];
       count: number;
-    }) => generateFlashcards(supabase, subject, topics, count),
+    }) => generateFlashcards(subject, topics, count),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flashcards'] });
     },

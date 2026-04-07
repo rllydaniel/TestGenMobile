@@ -38,52 +38,39 @@ export default function PlanScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <FadeInView delay={0} duration={350}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Test Planning</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Build a personalized study schedule toward your exam.
-          </Text>
-        </FadeInView>
-
         {isLoading ? null : plan ? (
           /* Active plan view */
           <ActivePlanCard plan={plan} />
         ) : (
           /* No plan — premium gate */
           <FadeInView delay={100} duration={350}>
-            {/* Lock card */}
-            <View style={[styles.lockCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.lockIconCircle, { backgroundColor: colors.primaryLight }]}>
-                <Ionicons name="lock-closed" size={32} color={colors.primary} />
-              </View>
-              <Text style={[styles.lockTitle, { color: colors.textPrimary }]}>
-                Build Your Study Plan
-              </Text>
-              <Text style={[styles.lockDesc, { color: colors.textMuted }]}>
-                Take a diagnostic test and get a personalized schedule tailored to your goals and exam date.
-              </Text>
+            <Text style={[styles.lockHeading, { color: colors.textPrimary }]}>
+              Build Your Study Plan
+            </Text>
+            <Text style={[styles.lockDesc, { color: colors.textMuted }]}>
+              Take a diagnostic test and get a personalized schedule tailored to your goals and exam date.
+            </Text>
 
-              {/* Feature list */}
-              <View style={styles.featureList}>
-                {PREMIUM_FEATURES.map((feature) => (
-                  <View key={feature} style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-                    <Text style={[styles.featureText, { color: colors.textMuted }]}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <Pressable
-                onPress={() => router.push('/(app)/plan/setup')}
-                style={({ pressed }) => [
-                  styles.ctaButton,
-                  { backgroundColor: colors.primary, opacity: pressed ? 0.88 : 1, ...SHADOWS.primary },
-                ]}
-              >
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>Get Started</Text>
-              </Pressable>
+            {/* Feature list */}
+            <View style={styles.featureList}>
+              {PREMIUM_FEATURES.map((feature) => (
+                <View key={feature} style={styles.featureRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                  <Text style={[styles.featureText, { color: colors.textMuted }]}>{feature}</Text>
+                </View>
+              ))}
             </View>
+
+            <Pressable
+              onPress={() => router.push('/(app)/plan/setup')}
+              style={({ pressed }) => [
+                styles.ctaButton,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.88 : 1, ...SHADOWS.primary },
+              ]}
+            >
+              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+              <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>Get Started</Text>
+            </Pressable>
           </FadeInView>
         )}
       </ScrollView>
@@ -196,44 +183,29 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
     lineHeight: FONT_SIZES.sm * 1.6,
   },
-  lockCard: {
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    ...SHADOWS.md,
-  },
-  lockIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  lockTitle: {
-    fontSize: FONT_SIZES.xl,
+  lockHeading: {
+    fontSize: FONT_SIZES.xxl,
     fontFamily: FONTS.displaySemiBold,
-    textAlign: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
+    marginTop: SPACING.xl,
     includeFontPadding: false,
+    lineHeight: FONT_SIZES.xxl * 1.2,
   },
   lockDesc: {
     fontSize: FONT_SIZES.base,
     fontFamily: FONTS.sansRegular,
-    textAlign: 'center',
     lineHeight: FONT_SIZES.base * 1.6,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   featureList: {
     width: '100%',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: SPACING.sm,
+    gap: SPACING.md,
   },
   featureText: {
     flex: 1,

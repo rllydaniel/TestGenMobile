@@ -13,6 +13,9 @@ export interface UserProfile {
   averageScore: number;
   currentStreak: number;
   longestStreak: number;
+  role: 'user' | 'admin';
+  is_premium_override: boolean;
+  flashcard_generations_used: number;
 }
 
 export interface Achievement {

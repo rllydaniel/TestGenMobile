@@ -12,11 +12,15 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Alert } from 'react-native';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { subjects } from '@/lib/subjects';
+import { useStudyGuideAccess, useTrackGuideAccess } from '@/hooks/useStudyGuide';
+import { useEntitlement } from '@/hooks/useEntitlement';
+import { useProfile } from '@/hooks/useProfile';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
 
 const FILTER_PILLS = ['All', 'SAT', 'ACT', 'AP', 'Core'] as const;
@@ -36,6 +40,26 @@ export default function StudyGuidesScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('All');
+  const { isPremium } = useEntitlement();
+  const { data: profile } = useProfile();
+  const trackAccess = useTrackGuideAccess();
+  const freeSubjects: string[] = (profile as any)?.free_guide_subjects ?? [];
+
+  const handleGuidePress = (subjectId: string) => {
+    const isUnlocked = isPremium || freeSubjects.includes(subjectId) || freeSubjects.length < 2;
+    if (!isUnlocked) {
+      router.push('/(app)/subscription');
+      return;
+    }
+    // Track access for free users
+    if (!isPremium && !freeSubjects.includes(subjectId)) {
+      trackAccess.mutate(subjectId);
+    }
+    router.push({
+      pathname: '/(app)/guide-detail',
+      params: { subjectId },
+    });
+  };
 
   const filteredSubjects = useMemo(() => {
     const filterFn = CATEGORY_MAP[activeFilter] ?? CATEGORY_MAP.All;
@@ -149,12 +173,7 @@ export default function StudyGuidesScreen() {
                 <View style={{ marginTop: SPACING.md }}>
                   <Button
                     label="Start Reading →"
-                    onPress={() =>
-                      router.push({
-                        pathname: '/(app)/guide-detail',
-                        params: { subjectId: 'sat' },
-                      })
-                    }
+                    onPress={() => handleGuidePress('sat')}
                   />
                 </View>
               </Card>
@@ -169,15 +188,13 @@ export default function StudyGuidesScreen() {
             </View>
           </>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const isLocked = !isPremium && !freeSubjects.includes(item.id) && freeSubjects.length >= 2;
+          return (
           <View style={{ paddingHorizontal: SPACING.screenH, marginBottom: SPACING.sm }}>
             <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/(app)/guide-detail',
-                  params: { subjectId: item.id },
-                })
-              }
+              onPress={() => handleGuidePress(item.id)}
+              style={{ opacity: isLocked ? 0.7 : 1 }}
             >
               <Card padding="none" style={{ backgroundColor: colors.surface }}>
                 {/* Cover image or colored band */}
@@ -215,16 +232,17 @@ export default function StudyGuidesScreen() {
                       {item.topics.length} topics · {guideCount(item.topics.length)} guides
                     </Text>
                   </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={colors.textFaint}
-                  />
+                  {isLocked ? (
+                    <Ionicons name="lock-closed" size={18} color={colors.textFaint} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+                  )}
                 </View>
               </Card>
             </Pressable>
           </View>
-        )}
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={48} color={colors.textFaint} />

@@ -6,6 +6,7 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TestHistorySkeleton } from '@/components/ui/Skeleton';
-import { useTestHistory } from '@/hooks/useTests';
+import { useTestHistory, useDeleteTest } from '@/hooks/useTests';
 import { subjects } from '@/lib/subjects';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
@@ -33,6 +34,7 @@ export default function HistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: tests, isLoading } = useTestHistory();
+  const deleteTest = useDeleteTest();
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery);
 
@@ -144,6 +146,16 @@ export default function HistoryScreen() {
                   onPress={() =>
                     router.push({ pathname: '/(app)/test/results/[id]', params: { id: item.id } })
                   }
+                  onLongPress={() => {
+                    Alert.alert(
+                      'Delete Test',
+                      'Are you sure you want to remove this test from your history?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => deleteTest.mutate(item.id) },
+                      ]
+                    );
+                  }}
                   style={({ pressed }) => [
                     styles.testCard,
                     {
@@ -215,7 +227,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: FONT_SIZES.xl,
-    fontFamily: FONTS.displaySemiBold,
+    fontFamily: FONTS.sansBold,
     lineHeight: FONT_SIZES.xl * 1.2,
     includeFontPadding: false,
   },
@@ -255,7 +267,7 @@ const styles = StyleSheet.create({
   dateText: { fontSize: FONT_SIZES.xs, fontFamily: FONTS.sansRegular, lineHeight: FONT_SIZES.xs * 1.5 },
   scoreText: {
     fontSize: FONT_SIZES.xl + 2,
-    fontFamily: FONTS.displaySemiBold,
+    fontFamily: FONTS.sansBold,
     lineHeight: (FONT_SIZES.xl + 2) * 1.2,
     includeFontPadding: false,
   },

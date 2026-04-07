@@ -72,7 +72,7 @@ export const AccuracyRing = ({ accuracy, size = 80, strokeWidth = 7 }: AccuracyR
         justifyContent: 'center',
       }}>
         <Text style={{
-          fontFamily: FONTS.displayBold,
+          fontFamily: FONTS.sansBold,
           fontSize: Math.round(size * 0.22),
           color: ringColor,
           lineHeight: Math.round(size * 0.27),

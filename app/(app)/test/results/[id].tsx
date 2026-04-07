@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   UIManager,
   StyleSheet,
   ActivityIndicator,
+  Alert,
+  Animated as RNAnimated,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +30,10 @@ import { TypingText } from '@/components/ui/TypingText';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { callEdgeFunction } from '@/lib/api/edgeFunctions';
+import { useProfile } from '@/hooks/useProfile';
+import { useEntitlement } from '@/hooks/useEntitlement';
+import { useGenerateFlashcards } from '@/hooks/useFlashcards';
+import { useAuth } from '@/lib/auth';
 import type { TestQuestion } from '@/lib/api/generateTest';
 import {
   FONTS,
@@ -37,10 +44,50 @@ import {
   getScoreColor,
   formatDuration,
 } from '@/constants/theme';
+import { MathRenderer } from '@/components/ui/MathRenderer';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+// ─── Confetti Dot ────────────────────────────────────────────────────────────
+
+const ConfettiDot = React.memo(function ConfettiDot({
+  color, delay, startX, startY,
+}: { color: string; delay: number; startX: number; startY: number }) {
+  const anim = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.delay(delay),
+        RNAnimated.timing(anim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        RNAnimated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, []);
+
+  return (
+    <RNAnimated.View
+      style={{
+        position: 'absolute',
+        left: startX,
+        top: startY,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: color,
+        opacity: anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.8, 0] }),
+        transform: [
+          { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, -80] }) },
+          { scale: anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.3, 0.6] }) },
+        ],
+      }}
+    />
+  );
+});
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -86,17 +133,26 @@ function computeResults(session: CompletedSession) {
   const results: QuestionResult[] = questions.map((q, i) => {
     const userAnswer = answers[String(i)] ?? '';
     const wasSkipped = userAnswer === '';
-    const isCorrect =
-      !wasSkipped && q.type === 'multiple-choice'
-        ? userAnswer === q.correctAnswer
-        : false;
+    let isCorrect = false;
+    if (!wasSkipped && q.type === 'multiple-choice') {
+      // userAnswer is a letter ("A"), correctAnswer is option text ("True")
+      // Compare both: direct match AND resolved option text match
+      const letterIdx = LETTERS.indexOf(userAnswer);
+      const selectedText = letterIdx >= 0 ? q.options?.[letterIdx] : undefined;
+      isCorrect = userAnswer === q.correctAnswer || selectedText === q.correctAnswer;
+    }
     return { question: q, index: i, userAnswer, isCorrect, wasSkipped };
   });
 
   const mcqResults = results.filter((r) => r.question.type === 'multiple-choice');
   const correctCount = mcqResults.filter((r) => r.isCorrect).length;
   const skippedCount = results.filter((r) => r.wasSkipped).length;
-  const scorePct = mcqResults.length > 0 ? Math.round((correctCount / mcqResults.length) * 100) : 0;
+  // Use pre-calculated score (includes AI-graded SR) when available
+  const scorePct = session.score != null
+    ? Math.round(session.score)
+    : mcqResults.length > 0
+      ? Math.round((correctCount / mcqResults.length) * 100)
+      : 0;
 
   const topicMap: Record<string, { correct: number; total: number }> = {};
   mcqResults.forEach((r) => {
@@ -142,7 +198,7 @@ function ScoreRing({ percentage, size = 120, strokeWidth = 10 }: { percentage: n
       <View style={StyleSheet.absoluteFillObject as any}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 34, fontFamily: FONTS.displayBold, color: colors.textPrimary, lineHeight: 34 * 1.1, includeFontPadding: false }}>
+            <Text style={{ fontSize: 34, fontFamily: FONTS.sansBold, color: colors.textPrimary, lineHeight: 34 * 1.1, includeFontPadding: false }}>
               {percentage}
             </Text>
             <Text style={{ fontSize: FONT_SIZES.base, fontFamily: FONTS.sansMedium, color: colors.textMuted, marginBottom: 4, lineHeight: FONT_SIZES.base * 1.4 }}>
@@ -267,8 +323,9 @@ function QuestionReviewCard({ result, index }: { result: QuestionResult; index: 
   const { question, userAnswer, isCorrect, wasSkipped } = result;
   const isMCQ = question.type === 'multiple-choice';
 
-  const statusColor = wasSkipped ? colors.textFaint : isCorrect ? colors.success : colors.error;
-  const statusIcon = wasSkipped ? 'remove-circle' : isCorrect ? 'checkmark-circle' : 'close-circle';
+  const isSR = question.type === 'short-response';
+  const statusColor = wasSkipped ? colors.textFaint : isSR ? colors.textMuted : isCorrect ? colors.success : colors.error;
+  const statusIcon = wasSkipped ? 'remove-circle' : isSR ? 'chatbox-ellipses' : isCorrect ? 'checkmark-circle' : 'close-circle';
 
   const toggleExpanded = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -303,9 +360,11 @@ function QuestionReviewCard({ result, index }: { result: QuestionResult; index: 
 
         {expanded && (
           <View style={{ marginTop: SPACING.md, gap: SPACING.sm }}>
-            <Text style={{ fontSize: FONT_SIZES.base, fontFamily: FONTS.sansRegular, color: colors.textPrimary, lineHeight: FONT_SIZES.base * 1.6 }}>
-              {question.text}
-            </Text>
+            <MathRenderer
+              content={question.text}
+              style={{ fontSize: FONT_SIZES.base, fontFamily: FONTS.sansRegular, color: colors.textPrimary, lineHeight: FONT_SIZES.base * 1.6 }}
+              fontSize={FONT_SIZES.base}
+            />
 
             {isMCQ && !wasSkipped && !isCorrect && (
               <View style={{ backgroundColor: colors.errorLight, borderRadius: RADIUS.sm, padding: SPACING.sm + 2, borderLeftWidth: 3, borderLeftColor: colors.error }}>
@@ -371,9 +430,76 @@ export default function TestResultsScreen() {
 
   const computed = session ? computeResults(session) : null;
 
+  const confettiDots = useMemo(() => {
+    if (!computed || computed.scorePct <= 75) return [];
+    const confettiColors = ['#2360E8', '#22C55E', '#F59E0B', '#9B59B6', '#1ABC9C', '#EF4444'];
+    return Array.from({ length: 22 }, (_, i) => ({
+      id: i,
+      color: confettiColors[i % confettiColors.length],
+      delay: i * 100,
+      x: Math.random() * (SCREEN_WIDTH - 40) + 20,
+      y: Math.random() * 140,
+    }));
+  }, [computed?.scorePct]);
+
   const handleBackToDashboard = useCallback(() => router.replace('/(tabs)'), [router]);
   const handleNewTest = useCallback(() => router.replace('/(tabs)/generate'), [router]);
   const handleRetake = useCallback(() => router.back(), [router]);
+
+  const { data: profile } = useProfile();
+  const { user } = useAuth();
+  const { isPremium } = useEntitlement();
+  const generateFlashcards = useGenerateFlashcards();
+  const [flashcardLoading, setFlashcardLoading] = useState(false);
+  const [reviewExpanded, setReviewExpanded] = useState(false);
+
+  const handleGenerateFlashcards = useCallback(async () => {
+    if (!session || !user) return;
+    const used = profile?.flashcard_generations_used ?? 0;
+
+    if (!isPremium && used >= 1) {
+      Alert.alert(
+        'Premium Feature',
+        'You\'ve used your free flashcard generation. Upgrade to premium for unlimited flashcard creation.',
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'View Plans', onPress: () => router.push('/(app)/subscription') },
+        ],
+      );
+      return;
+    }
+
+    setFlashcardLoading(true);
+    try {
+      const weakTopics = computed?.topics
+        ?.filter((t) => t.total > 0 && (t.correct / t.total) < 0.7)
+        ?.map((t) => t.name) ?? [session.subject];
+      const topics = weakTopics.length > 0 ? weakTopics : [session.subject];
+
+      await generateFlashcards.mutateAsync({
+        subject: session.subject,
+        topics,
+        count: Math.min(topics.length * 5, 20),
+      });
+
+      // Increment usage counter
+      if (!isPremium) {
+        await supabase
+          .from('profiles')
+          .update({ flashcard_generations_used: used + 1 })
+          .eq('id', user.id);
+      }
+
+      Alert.alert('Flashcards Created!', 'Your flashcards are ready in the Library.', [
+        { text: 'View Library', onPress: () => router.push('/(tabs)/library') },
+        { text: 'OK' },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Failed to generate flashcards');
+    } finally {
+      setFlashcardLoading(false);
+    }
+  }, [session, user, profile, isPremium, computed, generateFlashcards, router]);
 
   if (loading) {
     return (
@@ -418,6 +544,9 @@ export default function TestResultsScreen() {
 
         {/* ── Hero ── */}
         <View style={styles.heroSection}>
+          {confettiDots.map((dot) => (
+            <ConfettiDot key={dot.id} color={dot.color} delay={dot.delay} startX={dot.x} startY={dot.y} />
+          ))}
           <ScoreRing percentage={scorePct} size={120} strokeWidth={9} />
 
           {/* Stat chips */}
@@ -434,7 +563,7 @@ export default function TestResultsScreen() {
             )}
             <View style={[styles.statChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Ionicons name="list-outline" size={14} color={colors.textMuted} />
-              <Text style={[styles.statChipText, { color: colors.textPrimary }]}>{correctCount}/{totalQuestions}</Text>
+              <Text style={[styles.statChipText, { color: colors.textPrimary }]}>{correctCount}/{mcqCount} MCQ</Text>
             </View>
           </View>
 
@@ -463,16 +592,37 @@ export default function TestResultsScreen() {
         )}
 
         {/* ── Question Review ── */}
-        <View style={{ marginBottom: SPACING.md }}>
-          <Text style={[styles.sectionHeading, { color: colors.textFaint }]}>REVIEW QUESTIONS</Text>
-        </View>
-        {results.map((result, index) => (
+        <Pressable
+          onPress={() => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setReviewExpanded((prev) => !prev);
+          }}
+          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.sm, marginBottom: SPACING.sm }}
+        >
+          <Text style={[styles.sectionHeading, { color: colors.textFaint, marginBottom: 0 }]}>
+            REVIEW QUESTIONS ({totalQuestions})
+          </Text>
+          <Ionicons name={reviewExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textFaint} />
+        </Pressable>
+        {reviewExpanded && results.map((result, index) => (
           <QuestionReviewCard key={result.question.id || index} result={result} index={index} />
         ))}
 
         {/* ── CTA ── */}
         <Text style={[styles.savedText, { color: colors.textFaint }]}>Results saved to your history.</Text>
         <View style={{ gap: SPACING.sm, marginTop: SPACING.sm }}>
+          <Button
+            label={flashcardLoading ? 'Creating Flashcards...' : 'Create Flashcards from Weak Areas'}
+            onPress={handleGenerateFlashcards}
+            variant="outline"
+            size="lg"
+            icon={flashcardLoading
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Ionicons name="flash" size={20} color={colors.primary} />
+            }
+            fullWidth
+            disabled={flashcardLoading}
+          />
           <Button
             label="New Test"
             onPress={handleNewTest}

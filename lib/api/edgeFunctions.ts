@@ -1,8 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
-
 interface CallFunctionParams {
   functionName: string;
   body: Record<string, any>;
@@ -17,87 +15,52 @@ export const callEdgeFunction = async <T>({
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  console.log(`[EdgeFn] ── Calling: ${functionName} ──`);
+  console.log(`[EdgeFn] Calling: ${functionName}`);
 
   try {
-    // ── Step 1: get current session ──────────────────────────────────────────
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    // Ensure we have a fresh session before calling
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('[EdgeFn] Session:', session ? 'present' : 'none');
 
-    if (!currentSession) {
-      console.error('[Auth] ERROR: No session found — user may not be logged in');
-    } else {
-      console.log('[Auth] Session:', currentSession ? 'present' : 'null');
-      console.log('[Auth] Access token:', currentSession.access_token?.slice(0, 20) + '...');
-      console.log('[Auth] Token expires at:', currentSession.expires_at,
-        '(now:', Math.floor(Date.now() / 1000), ', diff:',
-        (currentSession.expires_at ?? 0) - Math.floor(Date.now() / 1000), 's)');
-    }
+    if (session) {
+      const expiresIn = (session.expires_at ?? 0) - Math.floor(Date.now() / 1000);
+      console.log(`[EdgeFn] Token expires in ${expiresIn}s`);
 
-    // ── Step 2: proactive refresh if expiring within 60 s ────────────────────
-    let session = currentSession;
-    if (session?.expires_at) {
-      const expiresIn = session.expires_at - Math.floor(Date.now() / 1000);
+      // Proactive refresh if expiring within 60s
       if (expiresIn < 60) {
-        console.log(`[Auth] Token expires in ${expiresIn}s — refreshing proactively...`);
-        const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+        console.log('[EdgeFn] Refreshing token...');
+        const { error: refreshErr } = await supabase.auth.refreshSession();
         if (refreshErr) {
-          console.error('[Auth] Refresh failed:', refreshErr.message);
-        } else if (refreshed.session) {
-          session = refreshed.session;
-          console.log('[Auth] Refreshed session successfully. New token prefix:',
-            session.access_token?.slice(0, 20) + '...');
+          console.error('[EdgeFn] Refresh failed:', refreshErr.message);
+        } else {
+          console.log('[EdgeFn] Token refreshed');
         }
       }
     }
 
-    // ── Step 3: force server-side validation (updates stored session if needed) ─
-    const { error: getUserErr } = await supabase.auth.getUser();
-    if (getUserErr) {
-      console.error('[Auth] getUser() error:', getUserErr.message);
-    }
-    // Re-fetch after getUser() may have refreshed the token
-    const { data: { session: latestSession } } = await supabase.auth.getSession();
-    if (latestSession) session = latestSession;
-
-    // ── Step 4: build headers ─────────────────────────────────────────────────
-    const headers: Record<string, string> = {
-      apikey: SUPABASE_ANON_KEY,
-    };
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
-    } else {
-      console.error('[Auth] ERROR: No access_token — Authorization header will be missing!');
-    }
-
-    console.log('[EdgeFn] Sending headers:', {
-      apikey: SUPABASE_ANON_KEY?.slice(0, 10) + '...',
-      Authorization: session?.access_token
-        ? `Bearer ${session.access_token.slice(0, 20)}...`
-        : 'MISSING',
-    });
-
-    // ── Step 5: invoke ────────────────────────────────────────────────────────
+    // Do NOT pass custom headers — let supabase-js handle apikey + Authorization
+    // Passing custom headers can REPLACE the SDK's automatic headers, causing empty apikey
     const { data, error } = await supabase.functions.invoke(functionName, {
       body,
-      headers,
     });
 
     if (error) {
       if (error instanceof FunctionsHttpError) {
-        console.error(`[EdgeFn] Error status: ${error.context.status}`);
+        const status = error.context.status;
+        console.error(`[EdgeFn] HTTP error ${status} from ${functionName}`);
         const errBody = await error.context.json().catch(() => ({}));
         console.error('[EdgeFn] Error body:', JSON.stringify(errBody));
         throw new Error(
           (errBody as any)?.error ??
           (errBody as any)?.message ??
-          `Generation failed (${error.context.status})`
+          `Generation failed (${status})`
         );
       }
       if (error instanceof FunctionsRelayError || error instanceof FunctionsFetchError) {
-        console.error('[EdgeFn] Network/relay error:', error.message);
+        console.error('[EdgeFn] Network error:', error.message);
         throw new Error('Network error — check your connection and try again.');
       }
-      console.error('[EdgeFn] Unknown error:', error.message);
+      console.error('[EdgeFn] Error:', error.message);
       throw new Error(error.message ?? 'Edge function error');
     }
 
@@ -106,7 +69,7 @@ export const callEdgeFunction = async <T>({
       throw new Error('No data returned from edge function');
     }
 
-    console.log(`[EdgeFn] Success: ${functionName} — keys:`, Object.keys(data));
+    console.log(`[EdgeFn] Success: ${functionName}`);
     return data as T;
   } finally {
     clearTimeout(timeout);

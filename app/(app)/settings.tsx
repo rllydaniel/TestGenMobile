@@ -246,11 +246,21 @@ function SettingToggle({
 }) {
   const { impact } = useHaptic();
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Pressable
+      onPress={() => { impact(); onToggle(!value); }}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 6,
+        minHeight: 44,
+        opacity: pressed ? 0.82 : 1,
+      })}
+    >
       <Text
         style={{
           fontSize: FONT_SIZES.base,
-          fontFamily: FONTS.sansRegular,
+          fontFamily: FONTS.sansMedium,
           color: colors.textPrimary,
           lineHeight: FONT_SIZES.base * 1.5,
           flexShrink: 1,
@@ -259,32 +269,34 @@ function SettingToggle({
       >
         {label}
       </Text>
-      <Pressable
-        onPress={() => onToggle(!value)}
-        onPressIn={() => impact()}
-        style={({ pressed }) => ({
-          width: 52,
-          height: 30,
-          borderRadius: 15,
-          backgroundColor: value ? colors.primary : colors.border,
+      <View
+        style={{
+          width: 51,
+          height: 31,
+          borderRadius: 16,
+          backgroundColor: value ? colors.primary : colors.surfaceSecondary,
+          borderWidth: value ? 0 : 1.5,
+          borderColor: colors.border,
           justifyContent: 'center',
-          padding: 2,
-          minHeight: 44,
-          opacity: pressed ? 0.82 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
-        })}
+          paddingHorizontal: 2,
+        }}
       >
         <View
           style={{
-            width: 26,
-            height: 26,
-            borderRadius: 13,
-            backgroundColor: colors.surface,
+            width: 27,
+            height: 27,
+            borderRadius: 14,
+            backgroundColor: '#FFFFFF',
             alignSelf: value ? 'flex-end' : 'flex-start',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.15,
+            shadowRadius: 3,
+            elevation: 3,
           }}
         />
-      </Pressable>
-    </View>
+      </View>
+    </Pressable>
   );
 }
 

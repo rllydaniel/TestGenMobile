@@ -113,25 +113,29 @@ export const generateTest = async (
   }
 
   // Save test session to database
+  const insertRow: Record<string, unknown> = {
+    user_id: user.id,
+    subject: params.subject,
+    topics: params.topics ?? [params.subject],
+    question_count: validated.length,
+    difficulty: params.difficulty,
+    config: {
+      questionTypes: params.questionTypes,
+      timeLimit: params.timeLimit,
+      studyMode: params.studyMode,
+      focusMode: params.focusMode ?? false,
+    },
+    questions: validated,
+    status: 'in_progress',
+    created_at: new Date().toISOString(),
+  };
+  if (params.planSessionId) {
+    insertRow.plan_session_id = params.planSessionId;
+  }
+
   const { data: session, error: insertError } = await supabase
     .from('test_sessions')
-    .insert({
-      user_id: user.id,
-      subject: params.subject,
-      topics: params.topics ?? [params.subject],
-      question_count: validated.length,
-      difficulty: params.difficulty,
-      config: {
-        questionTypes: params.questionTypes,
-        timeLimit: params.timeLimit,
-        studyMode: params.studyMode,
-        focusMode: params.focusMode ?? false,
-      },
-      questions: validated,
-      status: 'in_progress',
-      plan_session_id: params.planSessionId ?? null,
-      created_at: new Date().toISOString(),
-    })
+    .insert(insertRow)
     .select('id')
     .single();
 

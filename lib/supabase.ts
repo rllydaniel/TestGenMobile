@@ -41,13 +41,6 @@ const secureStoreAdapter = {
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  global: {
-    // Explicitly set apikey on every request so Supabase infra never sees an
-    // empty apikey header (seen as `"apikey": []` in edge function logs).
-    headers: {
-      apikey: supabaseAnonKey,
-    },
-  },
   auth: {
     storage: secureStoreAdapter,
     autoRefreshToken: true,

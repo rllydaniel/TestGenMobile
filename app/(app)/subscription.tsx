@@ -1,389 +1,555 @@
-import React from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
+  ActivityIndicator,
+  StyleSheet,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSubscription } from '@/hooks/useSubscription';
-import { useHaptic } from '@/hooks/useHaptic';
+import { Ionicons } from '@expo/vector-icons';
+import Purchases, {
+  type PurchasesPackage,
+} from 'react-native-purchases';
+import RevenueCatUI from 'react-native-purchases-ui';
+import { useEntitlement } from '@/hooks/useEntitlement';
+import { useRevenueCat } from '@/lib/revenueCat';
+import { ENTITLEMENT_ID } from '@/lib/revenueCat';
 import { useTheme } from '@/contexts/ThemeContext';
-import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
+import {
+  FONTS,
+  FONT_SIZES,
+  RADIUS,
+  SPACING,
+  SHADOWS,
+} from '@/constants/theme';
 
-const plans = [
-  {
-    id: 'free' as const,
-    name: 'Free',
-    price: '$0',
-    period: '',
-    color: '#6B7280',
-    badge: undefined as string | undefined,
-    features: [
-      'Up to 20 questions per test',
-      '2 flashcard decks',
-      'Basic study guides',
-      '5 AI Tutor messages/day',
-    ],
-  },
-  {
-    id: 'basic' as const,
-    name: 'Basic',
-    price: '$4.99',
-    period: 'per month',
-    color: '#2360E8',
-    badge: undefined as string | undefined,
-    features: [
-      'Up to 30 questions per test',
-      'Unlimited flashcard decks',
-      'All study guides',
-      '50 AI Tutor messages/day',
-      'Test history & analytics',
-    ],
-  },
-  {
-    id: 'premium' as const,
-    name: 'Premium',
-    price: '$9.99',
-    period: 'per month',
-    color: '#7C3AED',
-    badge: 'Best Value',
-    features: [
-      'Unlimited questions per test',
-      'Everything in Basic',
-      'Test Planning + Diagnostics',
-      'Unlimited AI Tutor',
-      'Graph questions',
-      'Priority generation',
-      'Advanced analytics',
-    ],
-  },
+/* ------------------------------------------------------------------ */
+/*  Feature list                                                       */
+/* ------------------------------------------------------------------ */
+
+const PRO_FEATURES = [
+  { icon: 'infinite-outline' as const, text: 'Unlimited test generation' },
+  { icon: 'layers-outline' as const, text: 'Up to 50 questions per test' },
+  { icon: 'flash-outline' as const, text: 'AI-powered flashcard generation' },
+  { icon: 'analytics-outline' as const, text: 'Detailed performance analytics' },
+  { icon: 'sparkles-outline' as const, text: 'Priority AI grading' },
+  { icon: 'shield-checkmark-outline' as const, text: 'Early access to new features' },
 ];
 
-const trustSignals = [
-  { icon: 'shield-checkmark' as const, label: 'Secure payment' },
-  { icon: 'refresh' as const, label: 'Cancel anytime' },
-  { icon: 'lock-closed' as const, label: 'Privacy protected' },
-];
+/* ------------------------------------------------------------------ */
+/*  Plan Card                                                          */
+/* ------------------------------------------------------------------ */
+
+function PlanCard({
+  pkg,
+  isSelected,
+  onSelect,
+  colors,
+  isBestValue,
+}: {
+  pkg: PurchasesPackage;
+  isSelected: boolean;
+  onSelect: () => void;
+  colors: any;
+  isBestValue: boolean;
+}) {
+  const product = pkg.product;
+  const isYearly = pkg.packageType === 'ANNUAL';
+  const title = isYearly ? 'Yearly' : 'Monthly';
+
+  // Calculate monthly equivalent for yearly
+  let subtitle = product.priceString + '/mo';
+  if (isYearly && product.price > 0) {
+    const monthlyEquiv = (product.price / 12).toFixed(2);
+    const currencyCode = product.currencyCode ?? '';
+    subtitle = `${currencyCode} ${monthlyEquiv}/mo`;
+  }
+
+  return (
+    <Pressable
+      onPress={onSelect}
+      style={({ pressed }) => [
+        styles.planCard,
+        {
+          backgroundColor: isSelected ? colors.primaryLight : colors.surface,
+          borderColor: isSelected ? colors.primary : colors.border,
+          opacity: pressed ? 0.88 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
+      ]}
+    >
+      {isBestValue && (
+        <View style={[styles.bestBadge, { backgroundColor: colors.primary }]}>
+          <Text style={styles.bestBadgeText}>BEST VALUE</Text>
+        </View>
+      )}
+
+      {/* Radio */}
+      <View style={[styles.radio, { borderColor: isSelected ? colors.primary : colors.border }]}>
+        {isSelected && <View style={[styles.radioFill, { backgroundColor: colors.primary }]} />}
+      </View>
+
+      {/* Plan details */}
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.planTitle, { color: colors.textPrimary }]}>{title}</Text>
+        <Text style={[styles.planPrice, { color: colors.textMuted }]}>
+          {product.priceString}{isYearly ? '/year' : '/month'}
+        </Text>
+      </View>
+
+      {/* Monthly equivalent for yearly */}
+      {isYearly && product.price > 0 && (
+        <View style={[styles.saveBadge, { backgroundColor: colors.success + '20' }]}>
+          <Text style={[styles.saveText, { color: colors.success }]}>Save ~40%</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Screen                                                        */
+/* ------------------------------------------------------------------ */
 
 export default function SubscriptionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data: subscription } = useSubscription();
   const { colors } = useTheme();
-  const currentTier = subscription?.tier ?? 'free';
+  const { isPremium, isLoading: entitlementLoading } = useEntitlement();
+  const { offerings, restorePurchases } = useRevenueCat();
+  const presentedRef = useRef(false);
 
-  const { impact: handleHaptic } = useHaptic();
+  const [selectedPkg, setSelectedPkg] = useState<PurchasesPackage | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+
+  // If already premium, show Customer Center
+  useEffect(() => {
+    if (!entitlementLoading && isPremium && !presentedRef.current) {
+      presentedRef.current = true;
+      try {
+        const result = RevenueCatUI.presentCustomerCenter();
+        if (result && typeof result.finally === 'function') {
+          result.finally(() => router.back());
+        } else {
+          router.back();
+        }
+      } catch {
+        router.back();
+      }
+    }
+  }, [isPremium, entitlementLoading]);
+
+  // Get available packages
+  const currentOffering = offerings?.current;
+  const packages = currentOffering?.availablePackages ?? [];
+
+  // Auto-select yearly (best value) or first package
+  useEffect(() => {
+    if (packages.length > 0 && !selectedPkg) {
+      const yearly = packages.find((p) => p.packageType === 'ANNUAL');
+      setSelectedPkg(yearly ?? packages[0]);
+    }
+  }, [packages]);
+
+  // Purchase handler
+  const handlePurchase = useCallback(async () => {
+    if (!selectedPkg) return;
+    setPurchasing(true);
+    try {
+      const { customerInfo } = await Purchases.purchasePackage(selectedPkg);
+      if (customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined) {
+        Alert.alert('Welcome to Pro!', 'You now have full access to all features.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
+    } catch (e: any) {
+      if (!e.userCancelled) {
+        Alert.alert('Purchase Failed', e?.message ?? 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setPurchasing(false);
+    }
+  }, [selectedPkg]);
+
+  // Restore handler
+  const handleRestore = useCallback(async () => {
+    setRestoring(true);
+    try {
+      const info = await restorePurchases();
+      if (info?.entitlements?.active?.[ENTITLEMENT_ID] !== undefined) {
+        Alert.alert('Restored!', 'Your subscription has been restored.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      } else {
+        Alert.alert('No Subscription Found', 'We couldn\'t find an active subscription for this account.');
+      }
+    } catch {
+      Alert.alert('Restore Failed', 'Something went wrong. Please try again.');
+    } finally {
+      setRestoring(false);
+    }
+  }, [restorePurchases]);
+
+  // Loading state
+  if (entitlementLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.appBackground }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  // If premium, the useEffect above handles showing Customer Center
+  if (isPremium) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.appBackground }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.appBackground }}>
       <ScrollView
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: SPACING.screenH,
           paddingTop: insets.top + SPACING.md,
-          paddingBottom: 120,
+          paddingHorizontal: SPACING.screenH,
+          paddingBottom: 200 + insets.bottom,
         }}
+        showsVerticalScrollIndicator={false}
       >
         {/* Close button */}
-        <View style={{ alignItems: 'flex-start', marginBottom: SPACING.lg }}>
-          <Pressable
-            onPress={() => router.back()}
-            onPressIn={() => handleHaptic()}
-            style={({ pressed }) => ({
-              minHeight: 44,
-              justifyContent: 'center',
-              opacity: pressed ? 0.82 : 1,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
-            })}
-          >
-            <Ionicons name="close" size={28} color={colors.textPrimary} />
-          </Pressable>
-        </View>
-
-        {/* Hero header */}
-        <View style={{ alignItems: 'center', marginBottom: SPACING.xl }}>
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: RADIUS.lg,
-              backgroundColor: '#7C3AED18',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: SPACING.md,
-            }}
-          >
-            <Ionicons name="star" size={30} color="#7C3AED" />
-          </View>
-          <Text
-            style={{
-              fontSize: FONT_SIZES.xxl,
-              fontFamily: FONTS.displayBold,
-              color: colors.textPrimary,
-              textAlign: 'center',
-              lineHeight: FONT_SIZES.xxl * 1.3,
-              marginBottom: SPACING.sm,
-            }}
-            numberOfLines={2}
-          >
-            {'Unlock Your\nFull Potential'}
-          </Text>
-          <Text
-            style={{
-              fontSize: FONT_SIZES.base,
-              fontFamily: FONTS.sansRegular,
-              color: colors.textMuted,
-              textAlign: 'center',
-              lineHeight: FONT_SIZES.base * 1.6,
-              paddingHorizontal: SPACING.md,
-            }}
-            numberOfLines={2}
-          >
-            Choose a plan that fits your study goals and unlock powerful features.
-          </Text>
-        </View>
-
-        {/* Plan cards */}
-        <View style={{ gap: SPACING.md }}>
-          {plans.map((plan) => {
-            const isCurrent = currentTier === plan.id;
-            const isPremium = plan.id === 'premium';
-
-            return (
-              <View
-                key={plan.id}
-                style={[
-                  {
-                    borderRadius: RADIUS.xl,
-                    padding: SPACING.lg,
-                    overflow: 'hidden',
-                  },
-                  isPremium
-                    ? {
-                        backgroundColor: plan.color,
-                        ...SHADOWS.lg,
-                      }
-                    : {
-                        backgroundColor: colors.surface,
-                        borderWidth: 1,
-                        borderColor: isCurrent ? plan.color : colors.border,
-                        ...SHADOWS.md,
-                      },
-                ]}
-              >
-                {/* Badge */}
-                {plan.badge && (
-                  <View
-                    style={{
-                      alignSelf: 'flex-start',
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      paddingHorizontal: SPACING.sm + 4,
-                      paddingVertical: SPACING.xs,
-                      borderRadius: RADIUS.full,
-                      marginBottom: SPACING.sm,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: FONT_SIZES.xs,
-                        fontFamily: FONTS.sansBold,
-                        color: colors.textOnPrimary,
-                        lineHeight: FONT_SIZES.xs * 1.4,
-                      }}
-                      numberOfLines={1}
-                    >
-                      {plan.badge}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Plan name + price row */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: SPACING.md,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: FONT_SIZES.lg,
-                      fontFamily: FONTS.sansBold,
-                      color: isPremium ? colors.textOnPrimary : plan.color,
-                      lineHeight: FONT_SIZES.lg * 1.3,
-                      flex: 1,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {plan.name}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <Text
-                      style={{
-                        fontSize: FONT_SIZES.xxl,
-                        fontFamily: FONTS.displayBold,
-                        color: isPremium ? colors.textOnPrimary : colors.textPrimary,
-                        lineHeight: FONT_SIZES.xxl * 1.2,
-                      }}
-                      numberOfLines={1}
-                    >
-                      {plan.price}
-                    </Text>
-                    {plan.period ? (
-                      <Text
-                        style={{
-                          fontSize: FONT_SIZES.sm,
-                          fontFamily: FONTS.sansRegular,
-                          color: isPremium
-                            ? 'rgba(255,255,255,0.7)'
-                            : colors.textMuted,
-                          lineHeight: FONT_SIZES.sm * 1.5,
-                          marginLeft: 4,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {plan.period}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
-
-                {/* Features */}
-                <View style={{ gap: SPACING.sm, marginBottom: SPACING.lg }}>
-                  {plan.features.map((feature) => (
-                    <View
-                      key={feature}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: SPACING.sm + 2,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 11,
-                          backgroundColor: isPremium
-                            ? 'rgba(255,255,255,0.2)'
-                            : `${plan.color}18`,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Ionicons
-                          name="checkmark"
-                          size={14}
-                          color={isPremium ? colors.textOnPrimary : plan.color}
-                        />
-                      </View>
-                      <Text
-                        style={{
-                          fontSize: FONT_SIZES.sm + 1,
-                          fontFamily: FONTS.sansRegular,
-                          color: isPremium ? colors.textOnPrimary : colors.textPrimary,
-                          lineHeight: (FONT_SIZES.sm + 1) * 1.5,
-                          flex: 1,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {feature}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* CTA Button */}
-                <Pressable
-                  onPress={() => {
-                    if (isCurrent) return;
-                    if (plan.id === 'free') {
-                      Alert.alert(
-                        'Downgrade',
-                        'To downgrade your plan, please manage your subscription through the App Store or Google Play.',
-                      );
-                    } else {
-                      Alert.alert(
-                        'Coming Soon',
-                        `In-app subscriptions are launching soon. You'll be able to subscribe to ${plan.name} directly from here.`,
-                        [{ text: 'OK' }],
-                      );
-                    }
-                  }}
-                  onPressIn={() => handleHaptic()}
-                  disabled={isCurrent}
-                  style={({ pressed }) => ({
-                    minHeight: 44,
-                    borderRadius: RADIUS.md,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: SPACING.sm + 4,
-                    opacity: isCurrent ? 0.5 : pressed ? 0.82 : 1,
-                    transform: [{ scale: pressed && !isCurrent ? 0.98 : 1 }],
-                    backgroundColor: isPremium ? colors.textOnPrimary : plan.color,
-                  })}
-                >
-                  <Text
-                    style={{
-                      fontSize: FONT_SIZES.base,
-                      fontFamily: FONTS.sansBold,
-                      color: isPremium ? plan.color : colors.textOnPrimary,
-                      lineHeight: FONT_SIZES.base * 1.3,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {isCurrent
-                      ? 'Current Plan'
-                      : plan.id === 'free'
-                        ? 'Downgrade'
-                        : 'Subscribe'}
-                  </Text>
-                </Pressable>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Trust signals */}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'center',
-            gap: SPACING.lg,
-            marginTop: SPACING.xl,
-            paddingVertical: SPACING.md,
-          }}
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={[styles.closeButton, { backgroundColor: colors.surfaceSecondary }]}
         >
-          {trustSignals.map((signal) => (
-            <View
-              key={signal.icon}
-              style={{ alignItems: 'center', gap: SPACING.xs + 2 }}
-            >
-              <Ionicons
-                name={signal.icon}
-                size={20}
-                color={colors.textMuted}
-              />
-              <Text
-                style={{
-                  fontSize: FONT_SIZES.xs,
-                  fontFamily: FONTS.sansMedium,
-                  color: colors.textMuted,
-                  lineHeight: FONT_SIZES.xs * 1.4,
-                }}
-                numberOfLines={1}
-              >
-                {signal.label}
+          <Ionicons name="close" size={22} color={colors.textMuted} />
+        </Pressable>
+
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={[styles.iconCircle, { backgroundColor: colors.primaryLight }]}>
+            <Ionicons name="diamond" size={40} color={colors.primary} />
+          </View>
+          <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>
+            Upgrade to Pro
+          </Text>
+          <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>
+            Unlock unlimited tests, AI flashcards, and advanced analytics
+          </Text>
+        </View>
+
+        {/* Feature list */}
+        <View style={[styles.featureCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {PRO_FEATURES.map((feature, i) => (
+            <View key={i} style={styles.featureRow}>
+              <View style={[styles.featureIconBg, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name={feature.icon} size={18} color={colors.primary} />
+              </View>
+              <Text style={[styles.featureText, { color: colors.textPrimary }]}>
+                {feature.text}
               </Text>
             </View>
           ))}
         </View>
+
+        {/* Plan selection */}
+        <Text style={[styles.sectionLabel, { color: colors.textFaint }]}>CHOOSE YOUR PLAN</Text>
+
+        {packages.length > 0 ? (
+          <View style={{ gap: SPACING.sm }}>
+            {packages.map((pkg) => {
+              const isYearly = pkg.packageType === 'ANNUAL';
+              return (
+                <PlanCard
+                  key={pkg.identifier}
+                  pkg={pkg}
+                  isSelected={selectedPkg?.identifier === pkg.identifier}
+                  onSelect={() => setSelectedPkg(pkg)}
+                  colors={colors}
+                  isBestValue={isYearly}
+                />
+              );
+            })}
+          </View>
+        ) : (
+          <View style={[styles.noPackages, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="information-circle-outline" size={24} color={colors.textMuted} />
+            <Text style={[styles.noPackagesText, { color: colors.textMuted }]}>
+              Products are loading or unavailable. Please try again later.
+            </Text>
+          </View>
+        )}
       </ScrollView>
+
+      {/* Sticky bottom CTA */}
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            backgroundColor: colors.appBackground,
+            borderTopColor: colors.border,
+            paddingBottom: insets.bottom + SPACING.sm,
+          },
+        ]}
+      >
+        <Pressable
+          onPress={handlePurchase}
+          disabled={purchasing || !selectedPkg}
+          style={({ pressed }) => [
+            styles.purchaseButton,
+            {
+              backgroundColor: !selectedPkg ? colors.surfaceSecondary : colors.primary,
+              opacity: purchasing ? 0.7 : pressed ? 0.88 : 1,
+              transform: [{ scale: pressed && !purchasing ? 0.98 : 1 }],
+            },
+            selectedPkg ? SHADOWS.primary : undefined,
+          ]}
+        >
+          {purchasing ? (
+            <ActivityIndicator size="small" color={colors.textOnPrimary} />
+          ) : (
+            <>
+              <Ionicons name="sparkles" size={20} color={selectedPkg ? colors.textOnPrimary : colors.textFaint} />
+              <Text style={[styles.purchaseText, { color: selectedPkg ? colors.textOnPrimary : colors.textFaint }]}>
+                {selectedPkg
+                  ? `Subscribe — ${selectedPkg.product.priceString}/${selectedPkg.packageType === 'ANNUAL' ? 'year' : 'month'}`
+                  : 'Select a plan'}
+              </Text>
+            </>
+          )}
+        </Pressable>
+
+        {/* Restore + Terms */}
+        <View style={styles.bottomLinks}>
+          <Pressable onPress={handleRestore} disabled={restoring} style={styles.linkButton}>
+            <Text style={[styles.linkText, { color: colors.textMuted }]}>
+              {restoring ? 'Restoring...' : 'Restore Purchases'}
+            </Text>
+          </Pressable>
+          <Text style={[styles.linkDot, { color: colors.textFaint }]}>{'\u00B7'}</Text>
+          <Pressable style={styles.linkButton}>
+            <Text style={[styles.linkText, { color: colors.textMuted }]}>Terms</Text>
+          </Pressable>
+          <Text style={[styles.linkDot, { color: colors.textFaint }]}>{'\u00B7'}</Text>
+          <Pressable style={styles.linkButton}>
+            <Text style={[styles.linkText, { color: colors.textMuted }]}>Privacy</Text>
+          </Pressable>
+        </View>
+      </View>
     </View>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Styles                                                             */
+/* ------------------------------------------------------------------ */
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  closeButton: {
+    alignSelf: 'flex-end',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
+
+  /* Hero */
+  hero: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
+  heroTitle: {
+    fontFamily: FONTS.displaySemiBold,
+    fontSize: FONT_SIZES.xxl + 2,
+    textAlign: 'center',
+    lineHeight: (FONT_SIZES.xxl + 2) * 1.2,
+    marginBottom: SPACING.xs,
+  },
+  heroSubtitle: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: FONT_SIZES.base,
+    textAlign: 'center',
+    lineHeight: FONT_SIZES.base * 1.6,
+    paddingHorizontal: SPACING.lg,
+  },
+
+  /* Feature list */
+  featureCard: {
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
+    ...SHADOWS.sm,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  featureIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: FONT_SIZES.base,
+    flex: 1,
+    lineHeight: FONT_SIZES.base * 1.5,
+  },
+
+  /* Section label */
+  sectionLabel: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: FONT_SIZES.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: SPACING.sm,
+  },
+
+  /* Plan cards */
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    padding: SPACING.md,
+    minHeight: 72,
+    ...SHADOWS.sm,
+  },
+  bestBadge: {
+    position: 'absolute',
+    top: -10,
+    right: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+  },
+  bestBadgeText: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 10,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioFill: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  planTitle: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: FONT_SIZES.md,
+    lineHeight: FONT_SIZES.md * 1.3,
+  },
+  planPrice: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: FONT_SIZES.sm,
+    lineHeight: FONT_SIZES.sm * 1.5,
+    marginTop: 2,
+  },
+  saveBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  saveText: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: FONT_SIZES.xs,
+  },
+
+  /* No packages */
+  noPackages: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    padding: SPACING.md,
+  },
+  noPackagesText: {
+    flex: 1,
+    fontFamily: FONTS.sansRegular,
+    fontSize: FONT_SIZES.sm,
+    lineHeight: FONT_SIZES.sm * 1.5,
+  },
+
+  /* Bottom bar */
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    paddingHorizontal: SPACING.screenH,
+    paddingTop: SPACING.md,
+  },
+  purchaseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 54,
+    borderRadius: RADIUS.md,
+    gap: SPACING.sm,
+  },
+  purchaseText: {
+    fontFamily: FONTS.sansBold,
+    fontSize: FONT_SIZES.md,
+    includeFontPadding: false,
+  },
+  bottomLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  linkButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xs,
+  },
+  linkText: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: FONT_SIZES.xs,
+    textDecorationLine: 'underline',
+  },
+  linkDot: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: FONT_SIZES.xs,
+  },
+});

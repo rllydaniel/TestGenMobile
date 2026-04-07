@@ -55,6 +55,24 @@ export function useTestSummary() {
   });
 }
 
+export function useDeleteTest() {
+  const supabase = useSupabase();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (testId: string) => {
+      const { error } = await supabase
+        .from('test_sessions')
+        .delete()
+        .eq('id', testId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tests'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    },
+  });
+}
+
 export function useGradeShortResponse() {
   const supabase = useSupabase();
   return useMutation({

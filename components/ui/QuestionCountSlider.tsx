@@ -1,5 +1,6 @@
-import React, { useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING } from '@/constants/theme';
@@ -26,54 +27,18 @@ export function QuestionCountSlider({
   const { colors } = useTheme();
   const { impact } = useHaptic();
 
-  const trackWidth = useRef(0);
-  const lastSnapped = useRef(value);
-
-  const pct = (value - min) / (max - min);
   const showProBadge = value > freeMax && !isPremium;
-  const freeMaxPct = (freeMax - min) / (max - min);
 
-  const valueFromX = useCallback(
-    (x: number) => {
-      const ratio = Math.max(0, Math.min(1, x / trackWidth.current));
-      const raw = min + ratio * (max - min);
-      const snapped = Math.round(raw / step) * step;
-      return Math.max(min, Math.min(max, snapped));
-    },
-    [min, max, step],
-  );
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e) => {
-        const x = e.nativeEvent.locationX;
-        const v = valueFromX(x);
-        if (v !== lastSnapped.current) {
-          lastSnapped.current = v;
-          impact();
-          onChange(v);
-        }
-      },
-      onPanResponderMove: (e) => {
-        const x = e.nativeEvent.locationX;
-        const v = valueFromX(x);
-        if (v !== lastSnapped.current) {
-          lastSnapped.current = v;
-          impact();
-          onChange(v);
-        }
-      },
-    }),
-  ).current;
-
-  const handleLayout = (e: LayoutChangeEvent) => {
-    trackWidth.current = e.nativeEvent.layout.width;
+  const handleValueChange = (val: number) => {
+    const snapped = Math.round(val / step) * step;
+    const clamped = Math.max(min, Math.min(max, snapped));
+    if (clamped !== value) {
+      impact();
+      onChange(clamped);
+    }
   };
 
-  const ringColor =
-    value >= 40 ? colors.primary : value >= 20 ? colors.success : colors.primary;
+  const thumbColor = showProBadge ? '#7C3AED' : colors.primary;
 
   return (
     <View style={styles.container}>
@@ -90,51 +55,18 @@ export function QuestionCountSlider({
         )}
       </View>
 
-      {/* Track + thumb */}
-      <View
-        style={styles.trackContainer}
-        onLayout={handleLayout}
-        {...panResponder.panHandlers}
-      >
-        {/* Background track */}
-        <View style={[styles.track, { backgroundColor: colors.border }]} />
-
-        {/* Free tier limit marker */}
-        {!isPremium && (
-          <View
-            style={[
-              styles.limitMarker,
-              {
-                left: `${freeMaxPct * 100}%` as any,
-                backgroundColor: colors.textFaint,
-              },
-            ]}
-          />
-        )}
-
-        {/* Filled track */}
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${pct * 100}%` as any,
-              backgroundColor: showProBadge ? '#7C3AED' : ringColor,
-            },
-          ]}
-        />
-
-        {/* Thumb */}
-        <View
-          style={[
-            styles.thumb,
-            {
-              left: `${pct * 100}%` as any,
-              backgroundColor: showProBadge ? '#7C3AED' : ringColor,
-              borderColor: colors.appBackground,
-            },
-          ]}
-        />
-      </View>
+      {/* Native slider */}
+      <Slider
+        style={styles.slider}
+        minimumValue={min}
+        maximumValue={max}
+        step={step}
+        value={value}
+        onValueChange={handleValueChange}
+        minimumTrackTintColor={thumbColor}
+        maximumTrackTintColor={colors.border}
+        thumbTintColor={thumbColor}
+      />
 
       {/* Min / max labels */}
       <View style={styles.labelsRow}>
@@ -156,9 +88,6 @@ export function QuestionCountSlider({
   );
 }
 
-const TRACK_HEIGHT = 6;
-const THUMB_SIZE = 22;
-
 const styles = StyleSheet.create({
   container: {
     paddingTop: SPACING.xs,
@@ -167,12 +96,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   valueText: {
     fontSize: FONT_SIZES.xxl,
-    fontFamily: FONTS.displayBold,
+    fontFamily: FONTS.sansBold,
     includeFontPadding: false,
   },
   valueUnit: {
@@ -190,50 +119,14 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansBold,
     includeFontPadding: false,
   },
-  trackContainer: {
-    height: THUMB_SIZE + 8,
-    justifyContent: 'center',
-    paddingHorizontal: THUMB_SIZE / 2,
-    marginHorizontal: -(THUMB_SIZE / 2),
-  },
-  track: {
-    height: TRACK_HEIGHT,
-    borderRadius: TRACK_HEIGHT / 2,
-    position: 'absolute',
-    left: THUMB_SIZE / 2,
-    right: THUMB_SIZE / 2,
-  },
-  fill: {
-    height: TRACK_HEIGHT,
-    borderRadius: TRACK_HEIGHT / 2,
-    position: 'absolute',
-    left: THUMB_SIZE / 2,
-  },
-  thumb: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: THUMB_SIZE / 2,
-    borderWidth: 3,
-    position: 'absolute',
-    marginLeft: -(THUMB_SIZE / 2),
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-  },
-  limitMarker: {
-    position: 'absolute',
-    width: 2,
-    height: 14,
-    borderRadius: 1,
-    marginLeft: -1,
+  slider: {
+    width: '100%',
+    height: 40,
   },
   labelsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: SPACING.xs,
     paddingHorizontal: 0,
   },
   labelText: {

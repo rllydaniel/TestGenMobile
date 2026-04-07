@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
+import { subjects as allSubjects } from '@/lib/subjects';
 
 interface SubjectItem {
   key: string;
@@ -20,91 +21,77 @@ interface SubjectItem {
   description: string;
 }
 
-const SUBJECTS_BY_CATEGORY: Record<string, SubjectItem[]> = {
-  standardized: [
-    { key: 'sat', label: 'SAT', description: 'College entrance exam' },
-    { key: 'act', label: 'ACT', description: 'College readiness assessment' },
-    { key: 'psat', label: 'PSAT', description: 'Preliminary SAT / NMSQT' },
-  ],
-  ap: [
-    { key: 'ap-calculus-ab', label: 'AP Calculus AB', description: 'Limits, derivatives, integrals' },
-    { key: 'ap-calculus-bc', label: 'AP Calculus BC', description: 'Advanced calculus topics' },
-    { key: 'ap-biology', label: 'AP Biology', description: 'Cell biology, genetics, ecology' },
-    { key: 'ap-chemistry', label: 'AP Chemistry', description: 'Atomic structure, reactions, kinetics' },
-    { key: 'ap-physics-1', label: 'AP Physics 1', description: 'Mechanics, waves, circuits' },
-    { key: 'ap-us-history', label: 'AP US History', description: 'American history survey' },
-    { key: 'ap-english-lang', label: 'AP English Language', description: 'Rhetoric and composition' },
-    { key: 'ap-psychology', label: 'AP Psychology', description: 'Behavior and mental processes' },
-    { key: 'ap-computer-science-a', label: 'AP Computer Science A', description: 'Java programming fundamentals' },
-    { key: 'ap-statistics', label: 'AP Statistics', description: 'Data analysis, probability, inference' },
-  ],
-  mathematics: [
-    { key: 'algebra-1', label: 'Algebra I', description: 'Linear equations, inequalities, functions' },
-    { key: 'algebra-2', label: 'Algebra II', description: 'Polynomials, logarithms, sequences' },
-    { key: 'geometry', label: 'Geometry', description: 'Proofs, triangles, circles, area' },
-    { key: 'precalculus', label: 'Precalculus', description: 'Trigonometry, conic sections' },
-    { key: 'calculus', label: 'Calculus', description: 'Limits, derivatives, integrals' },
-    { key: 'statistics', label: 'Statistics', description: 'Probability, distributions, hypothesis testing' },
-  ],
-  sciences: [
-    { key: 'biology', label: 'Biology', description: 'Cells, genetics, evolution, ecology' },
-    { key: 'chemistry', label: 'Chemistry', description: 'Atoms, bonding, reactions, stoichiometry' },
-    { key: 'physics', label: 'Physics', description: 'Mechanics, electricity, waves' },
-    { key: 'earth-science', label: 'Earth Science', description: 'Geology, meteorology, astronomy' },
-    { key: 'environmental-science', label: 'Environmental Science', description: 'Ecosystems, pollution, sustainability' },
-  ],
-  humanities: [
-    { key: 'us-history', label: 'US History', description: 'Colonial era to modern America' },
-    { key: 'world-history', label: 'World History', description: 'Ancient civilizations to present' },
-    { key: 'english-literature', label: 'English Literature', description: 'Poetry, prose, drama analysis' },
-    { key: 'philosophy', label: 'Philosophy', description: 'Ethics, logic, metaphysics' },
-    { key: 'psychology', label: 'Psychology', description: 'Behavior, cognition, development' },
-  ],
-  languages: [
-    { key: 'spanish', label: 'Spanish', description: 'Grammar, vocabulary, reading' },
-    { key: 'french', label: 'French', description: 'Grammar, vocabulary, reading' },
-    { key: 'mandarin', label: 'Mandarin Chinese', description: 'Characters, tones, grammar' },
-    { key: 'german', label: 'German', description: 'Grammar, vocabulary, reading' },
-    { key: 'japanese', label: 'Japanese', description: 'Hiragana, katakana, kanji, grammar' },
-  ],
-};
-
-const CATEGORY_TITLES: Record<string, string> = {
-  standardized: 'Standardized Tests',
-  ap: 'AP Exams',
-  mathematics: 'Mathematics',
-  sciences: 'Sciences',
-  humanities: 'Humanities',
-  languages: 'Languages',
-};
-
 export default function SubjectsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { category } = useLocalSearchParams<{ category: string }>();
+  const { category, categoryLabel, categoryFilter } = useLocalSearchParams<{
+    category: string;
+    categoryLabel?: string;
+    categoryFilter?: string;
+  }>();
   const { colors } = useTheme();
   const { impact } = useHaptic();
 
   const [search, setSearch] = useState('');
 
   const subjects = useMemo(() => {
-    const list = SUBJECTS_BY_CATEGORY[category ?? ''] ?? [];
+    let list: SubjectItem[] = [];
+
+    // Build list dynamically from lib/subjects.ts using categoryFilter
+    if (categoryFilter) {
+      try {
+        const filterIds: string[] = JSON.parse(categoryFilter);
+        list = allSubjects
+          .filter((s) => filterIds.includes(s.id))
+          .map((s) => ({
+            key: s.id,
+            label: s.name,
+            description: s.topics.slice(0, 3).map((t) => t.name).join(', '),
+          }));
+      } catch {
+        list = [];
+      }
+    } else {
+      // Fallback: build from lib/subjects.ts using category key filters
+      const CATEGORY_FILTERS: Record<string, (id: string) => boolean> = {
+        standardized: (id) => ['sat', 'act', 'gre', 'gmat', 'mcat', 'lsat', 'toefl', 'ielts'].includes(id),
+        ap: (id) => id.startsWith('ap-'),
+        mathematics: (id) => ['algebra', 'calculus', 'geometry', 'statistics', 'math', 'trigonometry', 'pre-calculus', 'linear-algebra', 'discrete'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
+        math: (id) => ['algebra', 'calculus', 'geometry', 'statistics', 'math', 'trigonometry', 'pre-calculus', 'linear-algebra', 'discrete'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
+        sciences: (id) => ['biology', 'chemistry', 'physics', 'anatomy', 'microbiology', 'biochemistry', 'organic'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
+        science: (id) => ['biology', 'chemistry', 'physics', 'anatomy', 'microbiology', 'biochemistry', 'organic'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
+        humanities: (id) => ['history', 'english', 'psychology', 'economics'].some((k) => id.includes(k)) && !id.startsWith('ap-'),
+        languages: (id) => ['spanish', 'french', 'german', 'mandarin', 'japanese', 'latin', 'italian', 'portuguese', 'korean', 'arabic'].some((k) => id.includes(k)),
+      };
+
+      const filterFn = CATEGORY_FILTERS[category ?? ''];
+      if (filterFn) {
+        list = allSubjects
+          .filter((s) => filterFn(s.id))
+          .map((s) => ({
+            key: s.id,
+            label: s.name,
+            description: s.topics.slice(0, 3).map((t) => t.name).join(', '),
+          }));
+      }
+    }
+
     if (!search.trim()) return list;
     const q = search.toLowerCase().trim();
     return list.filter(
       (s) =>
         s.label.toLowerCase().includes(q) ||
-        s.description.toLowerCase().includes(q)
+        s.description.toLowerCase().includes(q),
     );
-  }, [category, search]);
+  }, [category, categoryFilter, search]);
 
-  const categoryTitle = CATEGORY_TITLES[category ?? ''] ?? 'Subjects';
+  const categoryTitle = categoryLabel ?? (category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Subjects');
 
   const handleSubjectPress = (subject: SubjectItem) => {
     impact();
     router.push({
       pathname: '/(app)/create/config',
-      params: { subject: subject.label },
+      params: { subject: subject.label, subjectId: subject.key },
     });
   };
 

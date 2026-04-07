@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { TestConfig, Question, TestResult } from '@/types/test';
 import { Flashcard } from '@/types/flashcard';
+import { callEdgeFunction } from '@/lib/api/edgeFunctions';
 
 export async function generateQuestions(
   supabase: SupabaseClient,
@@ -58,15 +59,14 @@ export async function summarizeTest(
 }
 
 export async function generateFlashcards(
-  supabase: SupabaseClient,
   subject: string,
   topics: string[],
   count: number
 ): Promise<Flashcard[]> {
-  const { data, error } = await supabase.functions.invoke('generate-flashcards', {
+  const data = await callEdgeFunction<{ flashcards: Flashcard[] }>({
+    functionName: 'generate-flashcards',
     body: { subject, topics, count },
   });
-  if (error) throw error;
   return data.flashcards;
 }
 
@@ -80,22 +80,6 @@ export async function generateQuizFromNotes(
   });
   if (error) throw error;
   return data.questions;
-}
-
-export async function checkSubscription(
-  supabase: SupabaseClient
-): Promise<{ tier: string; testsToday: number; testsRemaining: number }> {
-  const { data, error } = await supabase.functions.invoke('check-subscription', {});
-  if (error) throw error;
-  return data;
-}
-
-export async function checkUsage(
-  supabase: SupabaseClient
-): Promise<{ testsToday: number; limit: number; canGenerate: boolean }> {
-  const { data, error } = await supabase.functions.invoke('check-usage', {});
-  if (error) throw error;
-  return data;
 }
 
 export async function saveTestHistory(

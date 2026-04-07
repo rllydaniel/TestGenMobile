@@ -26,6 +26,14 @@ export default function AppLayout() {
       {/* History (moved from tabs) */}
       <Stack.Screen name="history" />
 
+      {/* Admin */}
+      <Stack.Screen name="admin/index" />
+      <Stack.Screen name="admin/users" />
+      <Stack.Screen name="admin/keys" />
+
+      {/* Redeem */}
+      <Stack.Screen name="redeem" />
+
       {/* Other screens */}
       <Stack.Screen name="upload" options={{ presentation: 'modal' }} />
       <Stack.Screen name="study-guides" />
@@ -35,6 +43,7 @@ export default function AppLayout() {
       <Stack.Screen name="leaderboard" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="guide-detail" />
+      <Stack.Screen name="edit-profile" />
       <Stack.Screen name="create" />
     </Stack>
   );

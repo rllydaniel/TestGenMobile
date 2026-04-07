@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { MathRenderer } from '@/components/ui/MathRenderer';
 import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/api/edgeFunctions';
 import type { TestQuestion } from '@/lib/api/generateTest';
 import {
   FONTS,
@@ -113,7 +114,7 @@ const AnswerOption = React.memo<AnswerOptionProps>(function AnswerOption({
           {letter}
         </Text>
       </View>
-      <Text style={[styles.optionText, { color: colors.textPrimary }]}>{text}</Text>
+      <MathRenderer content={text} style={{ flex: 1, color: colors.textPrimary }} fontSize={FONT_SIZES.base} />
       {isCorrect && <Ionicons name="checkmark-circle" size={20} color={colors.success} style={{ marginLeft: 8 }} />}
       {isIncorrect && <Ionicons name="close-circle" size={20} color={colors.error} style={{ marginLeft: 8 }} />}
     </Pressable>
@@ -208,6 +209,8 @@ export default function TestTakingScreen() {
   const [showSubmitSheet, setShowSubmitSheet] = useState(false);
   const [showExplanation, setShowExplanation] = useState<Record<number, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [gradingResults, setGradingResults] = useState<Record<number, { score: number; maxScore: number; feedback: string }>>({});
+  const [gradingInProgress, setGradingInProgress] = useState<Record<number, boolean>>({});
 
   // Animation
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -253,7 +256,8 @@ export default function TestTakingScreen() {
   const isLastQuestion = currentQuestion === totalQuestions - 1;
   const isFirstQuestion = currentQuestion === 0;
   const isFlagged = flaggedQuestions.has(currentQuestion);
-  const studyMode = session?.study_mode ?? false;
+  const focusMode = (session?.config as any)?.focusMode === true;
+  const studyMode = !focusMode;
 
   const answeredCount = useMemo(() => {
     let count = 0;
@@ -346,15 +350,54 @@ export default function TestTakingScreen() {
         }
       });
 
-      // Calculate score (MCQ only — short response graded server-side later)
-      let correct = 0;
+      // Calculate score — MCQ binary + short-response AI grading
+      let mcqCorrect = 0;
+      const mcqCount = questions.filter((q) => q.type === 'multiple-choice').length;
+      const srQuestions = questions.map((q, i) => ({ q, i })).filter(({ q }) => q.type === 'short-response');
+
       questions.forEach((q, i) => {
-        if (q.type === 'multiple-choice' && answersMap[String(i)] === q.correctAnswer) {
-          correct++;
+        if (q.type !== 'multiple-choice') return;
+        const selIdx = selectedAnswers[i];
+        if (selIdx === undefined) return;
+        const selectedText = q.options?.[selIdx];
+        if (LETTERS[selIdx] === q.correctAnswer || selectedText === q.correctAnswer) {
+          mcqCorrect++;
         }
       });
-      const mcqCount = questions.filter((q) => q.type === 'multiple-choice').length;
-      const score = mcqCount > 0 ? Math.round((correct / mcqCount) * 100) : null;
+
+      // Grade short responses via AI (batch)
+      let srTotalScore = 0;
+      let srMaxScore = 0;
+      for (const { q, i } of srQuestions) {
+        const userAnswer = (shortAnswers[i] ?? '').trim();
+        if (!userAnswer) continue;
+        srMaxScore += 10;
+        // Use cached grade if available (from study mode)
+        if (gradingResults[i]) {
+          srTotalScore += gradingResults[i].score;
+          continue;
+        }
+        try {
+          const result = await callEdgeFunction<{ score: number; maxScore: number; feedback: string }>({
+            functionName: 'grade-response',
+            body: { question: q.text, correctAnswer: q.correctAnswer, userAnswer },
+            timeoutMs: 15000,
+          });
+          if (result) srTotalScore += result.score;
+        } catch {
+          // If grading fails, give partial credit
+          srTotalScore += 5;
+        }
+      }
+
+      // Combined score: weighted by question count
+      const totalQuestionCount = mcqCount + srQuestions.length;
+      let score: number | null = null;
+      if (totalQuestionCount > 0) {
+        const mcqPortion = mcqCount > 0 ? (mcqCorrect / mcqCount) * (mcqCount / totalQuestionCount) : 0;
+        const srPortion = srMaxScore > 0 ? (srTotalScore / srMaxScore) * (srQuestions.length / totalQuestionCount) : 0;
+        score = Math.round((mcqPortion + srPortion) * 100);
+      }
 
       await supabase
         .from('test_sessions')
@@ -382,7 +425,7 @@ export default function TestTakingScreen() {
     } catch {
       setSubmitting(false);
     }
-  }, [session, submitting, questions, selectedAnswers, shortAnswers, timerSeconds, router, params.returnTo, params.diagnosticSetup]);
+  }, [session, submitting, questions, selectedAnswers, shortAnswers, timerSeconds, router, params.returnTo, params.diagnosticSetup, gradingResults]);
 
   const handleReviewFlagged = useCallback(() => {
     setShowSubmitSheet(false);
@@ -399,7 +442,11 @@ export default function TestTakingScreen() {
     const isStudy = studyMode && showExplanation[questionIdx];
 
     if (isStudy && q?.options) {
-      const correctIdx = LETTERS.indexOf(q.correctAnswer);
+      // Find correct index: try letter match first, then text match (for T/F)
+      let correctIdx = LETTERS.indexOf(q.correctAnswer);
+      if (correctIdx === -1) {
+        correctIdx = q.options.findIndex((o) => o === q.correctAnswer);
+      }
       if (optionIdx === correctIdx) return 'correct';
       if (optionIdx === selected && selected !== correctIdx) return 'incorrect';
     } else if (didAnswer && optionIdx === selected) {
@@ -454,8 +501,13 @@ export default function TestTakingScreen() {
   }
 
   const isMCQ = question.type === 'multiple-choice';
+  const correctLetterIdx = LETTERS.indexOf(question.correctAnswer);
+  const correctTextIdx = question.options?.findIndex((o) => o === question.correctAnswer) ?? -1;
+  const resolvedCorrectIdx = correctLetterIdx !== -1 ? correctLetterIdx : correctTextIdx;
   const correctAnswerLabel = isMCQ
-    ? `${question.correctAnswer}: ${question.options?.[LETTERS.indexOf(question.correctAnswer)] ?? ''}`
+    ? resolvedCorrectIdx !== -1
+      ? `${LETTERS[resolvedCorrectIdx]}: ${question.options?.[resolvedCorrectIdx] ?? question.correctAnswer}`
+      : question.correctAnswer
     : question.correctAnswer;
 
   const mcqAnswered = isMCQ && selectedAnswers[currentQuestion] !== undefined;
@@ -530,9 +582,11 @@ export default function TestTakingScreen() {
           )}
 
           {/* Question text */}
-          <Text style={{ fontFamily: FONTS.sansMedium, fontSize: FONT_SIZES.md, color: colors.textPrimary, lineHeight: FONT_SIZES.md * 1.6, marginBottom: SPACING.xl }}>
-            {question.text}
-          </Text>
+          <MathRenderer
+            content={question.text}
+            style={{ fontFamily: FONTS.sansMedium, fontSize: FONT_SIZES.md, color: colors.textPrimary, lineHeight: FONT_SIZES.md * 1.6, marginBottom: SPACING.xl }}
+            fontSize={FONT_SIZES.md}
+          />
 
           {/* MCQ Options */}
           {isMCQ && question.options && question.options.map((optionText, index) => (
@@ -559,12 +613,60 @@ export default function TestTakingScreen() {
           {/* Study Mode: show explanation button for short-response */}
           {!isMCQ && studyMode && srAnswered && !showCurrentExplanation && (
             <Pressable
-              onPress={() => setShowExplanation((prev) => ({ ...prev, [currentQuestion]: true }))}
-              style={[styles.checkAnswerBtn, { backgroundColor: colors.primary }]}
+              onPress={async () => {
+                const qIdx = currentQuestion;
+                setGradingInProgress((prev) => ({ ...prev, [qIdx]: true }));
+                setShowExplanation((prev) => ({ ...prev, [qIdx]: true }));
+                try {
+                  const result = await callEdgeFunction<{ score: number; maxScore: number; feedback: string }>({
+                    functionName: 'grade-response',
+                    body: {
+                      question: question.text,
+                      correctAnswer: question.correctAnswer,
+                      userAnswer: shortAnswers[qIdx] ?? '',
+                    },
+                    timeoutMs: 15000,
+                  });
+                  if (result) {
+                    setGradingResults((prev) => ({ ...prev, [qIdx]: result }));
+                  }
+                } catch (err) {
+                  console.warn('Grading failed:', err);
+                } finally {
+                  setGradingInProgress((prev) => ({ ...prev, [qIdx]: false }));
+                }
+              }}
+              disabled={gradingInProgress[currentQuestion]}
+              style={[styles.checkAnswerBtn, { backgroundColor: colors.primary, opacity: gradingInProgress[currentQuestion] ? 0.6 : 1 }]}
             >
-              <Ionicons name="sparkles" size={16} color={colors.textOnPrimary} />
-              <Text style={[styles.checkAnswerText, { color: colors.textOnPrimary }]}>Check Answer</Text>
+              {gradingInProgress[currentQuestion] ? (
+                <ActivityIndicator size="small" color={colors.textOnPrimary} />
+              ) : (
+                <Ionicons name="sparkles" size={16} color={colors.textOnPrimary} />
+              )}
+              <Text style={[styles.checkAnswerText, { color: colors.textOnPrimary }]}>
+                {gradingInProgress[currentQuestion] ? 'Grading...' : 'Check Answer'}
+              </Text>
             </Pressable>
+          )}
+
+          {/* AI Grading Result for short-response */}
+          {!isMCQ && showCurrentExplanation && gradingResults[currentQuestion] && (
+            <FadeInView delay={0} duration={300}>
+              <View style={[styles.explanationPanel, {
+                backgroundColor: gradingResults[currentQuestion].score >= 7 ? colors.successLight : gradingResults[currentQuestion].score >= 4 ? colors.primaryLight : colors.errorLight,
+                borderLeftColor: gradingResults[currentQuestion].score >= 7 ? colors.success : gradingResults[currentQuestion].score >= 4 ? colors.primary : colors.error,
+              }]}>
+                <View style={[styles.explanationBadge, { backgroundColor: gradingResults[currentQuestion].score >= 7 ? colors.successLight : gradingResults[currentQuestion].score >= 4 ? colors.primaryLight : colors.errorLight }]}>
+                  <Text style={{ fontFamily: FONTS.sansBold, fontSize: FONT_SIZES.lg, color: gradingResults[currentQuestion].score >= 7 ? colors.success : gradingResults[currentQuestion].score >= 4 ? colors.primary : colors.error }}>
+                    {gradingResults[currentQuestion].score}/10
+                  </Text>
+                </View>
+                <Text style={{ fontFamily: FONTS.sansRegular, fontSize: FONT_SIZES.sm, color: colors.textPrimary, lineHeight: FONT_SIZES.sm * 1.7, marginTop: SPACING.sm }}>
+                  {gradingResults[currentQuestion].feedback}
+                </Text>
+              </View>
+            </FadeInView>
           )}
 
           {/* Explanation Panel */}
@@ -573,8 +675,8 @@ export default function TestTakingScreen() {
               explanation={question.explanation}
               isCorrect={
                 isMCQ
-                  ? selectedAnswers[currentQuestion] !== undefined && LETTERS[selectedAnswers[currentQuestion]] === question.correctAnswer
-                  : false // short-response: we show model answer, not grade
+                  ? selectedAnswers[currentQuestion] !== undefined && selectedAnswers[currentQuestion] === resolvedCorrectIdx
+                  : (gradingResults[currentQuestion]?.score ?? 0) >= 7
               }
               correctAnswerLabel={correctAnswerLabel}
             />

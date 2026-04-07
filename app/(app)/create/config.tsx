@@ -6,7 +6,6 @@ import {
   Pressable,
   TextInput,
   Switch,
-  ActivityIndicator,
   StyleSheet,
   Alert,
 } from 'react-native';
@@ -16,10 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useHaptic } from '@/hooks/useHaptic';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
-import { generateTest, resolveQuestionTypes, QuestionTypeOption } from '@/lib/api/generateTest';
+import { QuestionTypeOption } from '@/lib/api/generateTest';
 import { TopicSelector } from '@/components/ui/TopicSelector';
 import { QuestionCountSlider } from '@/components/ui/QuestionCountSlider';
 import { subjects } from '@/lib/subjects';
+import { useEntitlement } from '@/hooks/useEntitlement';
 
 type Difficulty = 'easy' | 'mixed' | 'hard';
 
@@ -40,9 +40,10 @@ const QUESTION_TYPE_OPTIONS: { key: QuestionTypeOption; label: string; desc: str
 export default function ConfigScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { subject: subjectParam } = useLocalSearchParams<{ subject: string }>();
+  const { subject: subjectParam, subjectId } = useLocalSearchParams<{ subject: string; subjectId?: string }>();
   const { colors } = useTheme();
   const { impact } = useHaptic();
+  const { isPremium } = useEntitlement();
 
   const [customSubject, setCustomSubject] = useState(subjectParam ?? '');
   const isCustom = !subjectParam;
@@ -54,16 +55,14 @@ export default function ConfigScreen() {
   const [timedMode, setTimedMode] = useState(false);
   const [timeLimit, setTimeLimit] = useState(15);
   const [focusMode, setFocusMode] = useState(false);
-  const [loading, setLoading] = useState(false);
-
   const resolvedSubject = isCustom ? customSubject.trim() : (subjectParam ?? '');
 
   // Get available topics for the selected subject
   const availableTopics = useMemo(() => {
     if (!subjectParam) return [];
-    const subj = subjects.find((s) => s.id === subjectParam || s.name === subjectParam);
+    const subj = subjects.find((s) => s.id === (subjectId ?? subjectParam) || s.name === subjectParam);
     return subj?.topics.map((t) => t.name) ?? [];
-  }, [subjectParam]);
+  }, [subjectParam, subjectId]);
 
   // Summary pills data
   const summaryPills = useMemo(() => {
@@ -79,39 +78,32 @@ export default function ConfigScreen() {
     return pills;
   }, [questionCount, difficulty, questionType, timedMode, timeLimit, selectedTopics]);
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(() => {
     if (!resolvedSubject) {
       Alert.alert('Subject Required', 'Please enter a subject to generate a test.');
       return;
     }
 
     impact();
-    setLoading(true);
 
-    try {
-      const result = await generateTest({
+    // Map question type to the format generating.tsx expects
+    const mappedType = questionType === 'short-response' ? 'short-response' : questionType === 'mixed' ? 'mixed' : 'multiple-choice';
+
+    router.push({
+      pathname: '/(app)/test/generating',
+      params: {
         subject: resolvedSubject,
-        questionCount,
+        topics: JSON.stringify(selectedTopics.length > 0 ? selectedTopics : [resolvedSubject]),
+        questionCount: String(questionCount),
+        questionType: mappedType,
         difficulty,
-        questionTypes: resolveQuestionTypes(questionType),
-        timeLimit: timedMode ? timeLimit * 60 : null,
-        studyMode: false,
-        focusMode,
-        topics: selectedTopics.length > 0 ? selectedTopics : undefined,
-      });
-
-      if (result.sessionId) {
-        router.push({
-          pathname: '/(app)/test/[id]',
-          params: { id: result.sessionId },
-        });
-      }
-    } catch (err: any) {
-      Alert.alert('Generation Failed', err?.message ?? 'Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [resolvedSubject, questionCount, difficulty, questionType, timedMode, timeLimit, selectedTopics, router]);
+        studyMode: 'false',
+        timerEnabled: timedMode ? 'true' : 'false',
+        timerMinutes: String(timeLimit),
+        focusMode: focusMode ? 'true' : 'false',
+      },
+    });
+  }, [resolvedSubject, questionCount, difficulty, questionType, timedMode, timeLimit, selectedTopics, focusMode, router]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.appBackground }]}>
@@ -217,7 +209,7 @@ export default function ConfigScreen() {
             max={50}
             step={5}
             freeMax={20}
-            isPremium={false}
+            isPremium={isPremium}
           />
         </View>
 
@@ -494,7 +486,7 @@ export default function ConfigScreen() {
         <View style={styles.generateContainer}>
           <Pressable
             onPress={handleGenerate}
-            disabled={loading || !resolvedSubject}
+            disabled={!resolvedSubject}
             style={({ pressed }) => [
               styles.generateButton,
               {
@@ -502,39 +494,33 @@ export default function ConfigScreen() {
                   !resolvedSubject
                     ? colors.surfaceSecondary
                     : colors.primary,
-                opacity: loading ? 0.7 : pressed ? 0.82 : 1,
-                transform: [{ scale: pressed && !loading ? 0.98 : 1 }],
+                opacity: pressed ? 0.82 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
               },
               resolvedSubject ? SHADOWS.primary : undefined,
             ]}
           >
-            {loading ? (
-              <ActivityIndicator size="small" color={colors.textOnPrimary} />
-            ) : (
-              <>
-                <Ionicons
-                  name="sparkles"
-                  size={20}
-                  color={
-                    !resolvedSubject
-                      ? colors.textFaint
-                      : colors.textOnPrimary
-                  }
-                />
-                <Text
-                  style={[
-                    styles.generateText,
-                    {
-                      color: !resolvedSubject
-                        ? colors.textFaint
-                        : colors.textOnPrimary,
-                    },
-                  ]}
-                >
-                  Generate Test
-                </Text>
-              </>
-            )}
+            <Ionicons
+              name="sparkles"
+              size={20}
+              color={
+                !resolvedSubject
+                  ? colors.textFaint
+                  : colors.textOnPrimary
+              }
+            />
+            <Text
+              style={[
+                styles.generateText,
+                {
+                  color: !resolvedSubject
+                    ? colors.textFaint
+                    : colors.textOnPrimary,
+                },
+              ]}
+            >
+              Generate Test
+            </Text>
           </Pressable>
         </View>
       </View>

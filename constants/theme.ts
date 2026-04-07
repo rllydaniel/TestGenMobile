@@ -70,7 +70,7 @@ export const COLORS = {
 };
 
 export const FONTS = {
-  // Playfair Display — all headings, score numbers, hero text
+  // Playfair Display — titles and headings only (not for numbers)
   displayBold: 'PlayfairDisplay_700Bold',
   displaySemiBold: 'PlayfairDisplay_600SemiBold',
   displayRegular: 'PlayfairDisplay_400Regular',

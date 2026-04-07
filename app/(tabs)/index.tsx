@@ -341,10 +341,6 @@ export default function HomeScreen() {
 
   const { impact: haptic } = useHaptic();
 
-  const handleCreateTest = useCallback(() => {
-    router.push('/(tabs)/generate');
-  }, [router]);
-
   const handleFlashcards = useCallback(() => {
     router.push('/(tabs)/library');
   }, [router]);
@@ -421,50 +417,70 @@ export default function HomeScreen() {
         <FadeInView delay={100} duration={300}>
         <View style={{ marginBottom: SPACING.lg }}>
           <SectionLabel>TODAY'S FOCUS</SectionLabel>
-          <Pressable
-            onPress={handleCreateTest}
-            onPressIn={() => haptic()}
-            style={({ pressed }) => [
-              styles.banner,
-              {
-                backgroundColor: colors.primary,
-                opacity: pressed ? 0.82 : 1,
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-              },
-            ]}
-          >
-            <View style={styles.bannerIcon}>
-              <Ionicons name="play" size={20} color={colors.textOnPrimary} />
+          {focusTopic ? (
+            <Pressable
+              onPress={() => router.push({ pathname: '/(tabs)/generate', params: { subject: focusSubject?.id ?? '', topic: focusTopic } })}
+              onPressIn={() => haptic()}
+              style={({ pressed }) => [
+                styles.banner,
+                {
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.82 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                },
+              ]}
+            >
+              <View style={[styles.bannerIcon, { backgroundColor: focusSubject?.color ? `${focusSubject.color}20` : colors.primaryLight }]}>
+                <Ionicons name="bulb" size={20} color={focusSubject?.color ?? colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[styles.bannerLabel, { color: colors.textMuted, includeFontPadding: false }]}
+                  numberOfLines={1}
+                >
+                  WEAKEST TOPIC
+                </Text>
+                <Text
+                  style={[
+                    styles.bannerTitle,
+                    { color: colors.textPrimary, includeFontPadding: false },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {focusTopic}
+                </Text>
+                {focusSubject && (
+                  <Text style={{ fontFamily: FONTS.sansRegular, fontSize: FONT_SIZES.xs, color: colors.textMuted, marginTop: 2 }} numberOfLines={1}>
+                    {focusSubject.name}
+                  </Text>
+                )}
+              </View>
+              <View style={[styles.bannerButton, { backgroundColor: colors.primaryLight }]}>
+                <Text
+                  style={[
+                    styles.bannerButtonText,
+                    { color: colors.primary, includeFontPadding: false },
+                  ]}
+                  numberOfLines={1}
+                >
+                  Practice
+                </Text>
+              </View>
+            </Pressable>
+          ) : (
+            <View style={[styles.banner, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
+              <View style={[styles.bannerIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="school" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.bannerTitle, { color: colors.textPrimary, includeFontPadding: false }]} numberOfLines={2}>
+                  Take your first test to unlock personalized focus recommendations
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[styles.bannerLabel, { includeFontPadding: false }]}
-                numberOfLines={1}
-              >
-                CREATE NEW TEST
-              </Text>
-              <Text
-                style={[
-                  styles.bannerTitle,
-                  { color: colors.textOnPrimary, includeFontPadding: false },
-                ]}
-                numberOfLines={1}
-              >
-                Generate a personalized practice test
-              </Text>
-            </View>
-            <View style={styles.bannerButton}>
-              <Text
-                style={[
-                  styles.bannerButtonText,
-                  { color: colors.textOnPrimary, includeFontPadding: false },
-                ]}
-                numberOfLines={1}
-              >
-                Start
-              </Text>
-            </View>
-          </Pressable>
+          )}
         </View>
         </FadeInView>
 
@@ -481,7 +497,7 @@ export default function HomeScreen() {
         </View>
         </FadeInView>
 
-        {/* ===== Streak + Today's Focus row ===== */}
+        {/* ===== Streak + Tests Today row ===== */}
         <FadeInView delay={250} duration={300}>
         <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg }}>
           <StatCard
@@ -494,11 +510,10 @@ export default function HomeScreen() {
             style={{ flex: 1 }}
           />
           <StatCard
-            label="TODAY'S FOCUS"
-            icon="time"
-            iconColor={colors.textMuted}
-            focusTopic={focusTopic}
-            focusSubjectColor={focusSubject?.color}
+            label="TESTS TODAY"
+            value={String(profile?.testsToday ?? 0)}
+            icon="document-text"
+            iconColor={colors.primary}
             colors={colors}
             style={{ flex: 1 }}
           />
@@ -559,50 +574,6 @@ export default function HomeScreen() {
             />
           </Pressable>
 
-          {/* Create Test card — primary bg, single column full-width */}
-          <Pressable
-            onPress={handleCreateTest}
-            onPressIn={() => haptic()}
-            style={({ pressed }) => [
-              styles.quickCard,
-              {
-                backgroundColor: colors.primary,
-                borderColor: colors.primary,
-                marginTop: SPACING.sm,
-                opacity: pressed ? 0.82 : 1,
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-              },
-            ]}
-          >
-            <View style={styles.quickCardIconWhite}>
-              <Ionicons name="add-circle" size={22} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[
-                  styles.quickCardTitle,
-                  { color: '#FFFFFF', includeFontPadding: false },
-                ]}
-                numberOfLines={1}
-              >
-                Create Test
-              </Text>
-              <Text
-                style={[
-                  styles.quickCardDesc,
-                  { color: 'rgba(255,255,255,0.7)', includeFontPadding: false },
-                ]}
-                numberOfLines={1}
-              >
-                Generate a personalized practice test
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color="rgba(255,255,255,0.7)"
-            />
-          </Pressable>
         </View>
         </FadeInView>
 
@@ -817,38 +788,6 @@ export default function HomeScreen() {
         </FadeInView>
       </ScrollView>
 
-      {/* Floating Action Button — New Test */}
-      <Pressable
-        onPress={handleCreateTest}
-        onPressIn={() => haptic()}
-        style={({ pressed }) => ({
-          position: 'absolute',
-          bottom: 24 + (insets.bottom || 0),
-          right: 20,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-          backgroundColor: colors.primary,
-          borderRadius: RADIUS.full,
-          paddingHorizontal: 20,
-          paddingVertical: 14,
-          opacity: pressed ? 0.88 : 1,
-          transform: [{ scale: pressed ? 0.96 : 1 }],
-          ...SHADOWS.primary,
-        })}
-      >
-        <Ionicons name="add" size={18} color="#FFFFFF" />
-        <Text
-          style={{
-            fontFamily: FONTS.sansSemiBold,
-            fontSize: FONT_SIZES.sm,
-            color: '#FFFFFF',
-            lineHeight: FONT_SIZES.sm * 1.5,
-          }}
-        >
-          New Test
-        </Text>
-      </Pressable>
     </View>
   );
 }
@@ -990,7 +929,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: FONT_SIZES.xl,
-    fontFamily: FONTS.displaySemiBold,
+    fontFamily: FONTS.sansBold,
     lineHeight: FONT_SIZES.xl * 1.2,
   },
   statUnit: {

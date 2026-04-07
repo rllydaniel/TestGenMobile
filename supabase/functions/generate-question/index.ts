@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
           {
             role: 'system',
             content:
-              'You are an expert test-prep question writer. Return valid JSON only, matching the schema provided.',
+              'You are an expert test-prep question writer. When questions involve math, use LaTeX notation ($...$ for inline, $$...$$ for display math). Return valid JSON only, matching the schema provided.',
           },
           { role: 'user', content: prompt },
         ],
@@ -144,5 +144,10 @@ Rules:
 - For short-response: "options" is [] and "correctAnswer" is a model answer (1-3 sentences)
 - For True/False questions: "options" is exactly ["True", "False"] and type is "multiple-choice"
 - Questions should reflect real ${subject} exam content at ${difficulty} difficulty
-- Explanations should be concise but educational`;
+- Explanations should be concise but educational
+- When questions involve math (fractions, exponents, roots, etc.), use LaTeX notation:
+  - Inline math: wrap with $...$ (e.g., $\\frac{1}{2}$, $x^2$, $\\sqrt{3}$)
+  - Display math: wrap with $$...$$ (e.g., $$\\int_0^1 x^2 dx$$)
+  - Always use $\\frac{a}{b}$ for fractions instead of a/b
+  - Keep non-math text outside the $ delimiters`;
 }

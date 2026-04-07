@@ -10,20 +10,18 @@ import {
   Switch,
   StyleSheet,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useHaptic } from '@/hooks/useHaptic';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useEntitlement } from '@/hooks/useEntitlement';
 import { FONTS, FONT_SIZES, RADIUS, SPACING, SHADOWS } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { subjects, Subject } from '@/lib/subjects';
-import { generateTest, resolveQuestionTypes } from '@/lib/api/generateTest';
 
 const QUESTION_COUNTS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 const PREMIUM_THRESHOLD = 20;
@@ -58,8 +56,7 @@ export default function TestWizardScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { impact } = useHaptic();
-  const { data: subscription } = useSubscription();
-  const isPremium = subscription?.tier === 'premium';
+  const { isPremium } = useEntitlement();
 
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(subjectId ?? null);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -67,7 +64,6 @@ export default function TestWizardScreen() {
   const [questionType, setQuestionType] = useState<QuestionType>('multiple-choice');
   const [difficulty, setDifficulty] = useState<Difficulty>('mixed');
   const [focusMode, setFocusMode] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [subjectSearch, setSubjectSearch] = useState('');
 
@@ -119,37 +115,29 @@ export default function TestWizardScreen() {
     setQuestionCount(count);
   }
 
-  const handleStartTest = useCallback(async () => {
+  const handleStartTest = useCallback(() => {
     if (!selectedSubject) return;
     impact();
-    setLoading(true);
 
     const mappedType = mapQuestionType(questionType);
     const topics = selectedTopics.length > 0
       ? selectedTopics
       : selectedSubject.topics.slice(0, 3).map((t) => t.name);
 
-    try {
-      const result = await generateTest({
+    router.push({
+      pathname: '/(app)/test/generating',
+      params: {
         subject: selectedSubject.name,
-        questionCount,
+        topics: JSON.stringify(topics),
+        questionCount: String(questionCount),
+        questionType: mappedType,
         difficulty,
-        questionTypes: resolveQuestionTypes(mappedType),
-        timeLimit: null,
-        studyMode: false,
-        focusMode,
-        topics,
-      });
-
-      router.push({
-        pathname: '/(app)/test/[id]',
-        params: { id: result.sessionId },
-      });
-    } catch (err: any) {
-      Alert.alert('Generation Failed', err?.message ?? 'Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+        studyMode: 'false',
+        timerEnabled: 'false',
+        timerMinutes: '0',
+        focusMode: focusMode ? 'true' : 'false',
+      },
+    });
   }, [selectedSubject, questionCount, difficulty, questionType, focusMode, selectedTopics, router, impact]);
 
   // ---------- summary line ----------
@@ -401,27 +389,21 @@ export default function TestWizardScreen() {
         </Text>
         <Pressable
           onPress={handleStartTest}
-          disabled={!selectedSubject || loading}
+          disabled={!selectedSubject}
           style={({ pressed }) => [
             styles.generateButton,
             {
               backgroundColor: !selectedSubject ? colors.surfaceSecondary : colors.primary,
-              opacity: loading ? 0.7 : pressed ? 0.82 : 1,
-              transform: [{ scale: pressed && !loading ? 0.98 : 1 }],
+              opacity: pressed ? 0.82 : 1,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
             },
             selectedSubject ? SHADOWS.primary : undefined,
           ]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.textOnPrimary} />
-          ) : (
-            <>
-              <Ionicons name="sparkles" size={20} color={!selectedSubject ? colors.textFaint : colors.textOnPrimary} />
-              <Text style={[styles.generateText, { color: !selectedSubject ? colors.textFaint : colors.textOnPrimary }]}>
-                Generate Test
-              </Text>
-            </>
-          )}
+          <Ionicons name="sparkles" size={20} color={!selectedSubject ? colors.textFaint : colors.textOnPrimary} />
+          <Text style={[styles.generateText, { color: !selectedSubject ? colors.textFaint : colors.textOnPrimary }]}>
+            Generate Test
+          </Text>
         </Pressable>
       </View>
 

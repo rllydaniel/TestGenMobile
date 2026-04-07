@@ -274,7 +274,7 @@ const fcStyles = StyleSheet.create({
   },
   masteryPct: {
     fontSize: FONT_SIZES.lg,
-    fontFamily: FONTS.displaySemiBold,
+    fontFamily: FONTS.sansBold,
     lineHeight: FONT_SIZES.lg * 1.2,
     includeFontPadding: false,
   },

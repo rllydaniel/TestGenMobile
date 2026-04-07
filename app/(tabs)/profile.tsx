@@ -16,8 +16,10 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/Label';
 import { useProfile } from '@/hooks/useProfile';
+import { useEntitlement } from '@/hooks/useEntitlement';
 import { useDashboardStats } from '@/hooks/useStats';
 import { useTheme } from '@/contexts/ThemeContext';
+import RevenueCatUI from 'react-native-purchases-ui';
 import {
   FONTS,
   FONT_SIZES,
@@ -34,37 +36,82 @@ export default function ProfileScreen() {
   const { data: profile } = useProfile();
   const { data: stats } = useDashboardStats();
 
-  const menuItems = [
+  const isAdmin = (profile as any)?.role === 'admin';
+  const { isPremium } = useEntitlement();
+
+  const menuSections = [
     {
-      icon: 'trophy' as const,
-      title: 'Achievements',
-      color: colors.warning,
-      onPress: () => router.push('/(app)/achievements'),
+      label: 'ACTIVITY',
+      items: [
+        {
+          icon: 'trophy' as const,
+          title: 'Achievements',
+          color: colors.warning,
+          onPress: () => router.push('/(app)/achievements'),
+        },
+        {
+          icon: 'time' as const,
+          title: 'Test History',
+          color: colors.primary,
+          onPress: () => router.push('/(app)/history'),
+        },
+        {
+          icon: 'podium' as const,
+          title: 'Leaderboard',
+          color: colors.levelAdvanced,
+          onPress: () => router.push('/(app)/leaderboard'),
+        },
+      ],
     },
     {
-      icon: 'time' as const,
-      title: 'Test History',
-      color: colors.primary,
-      onPress: () => router.push('/(app)/history'),
+      label: 'SUBSCRIPTION',
+      items: [
+        {
+          icon: 'card' as const,
+          title: isPremium ? 'Subscription' : 'Upgrade to Pro',
+          color: colors.success,
+          onPress: () => router.push('/(app)/subscription'),
+        },
+        ...(isPremium ? [{
+          icon: 'receipt' as const,
+          title: 'Manage Subscription',
+          color: colors.textMuted,
+          onPress: () => {
+            try {
+              RevenueCatUI.presentCustomerCenter();
+            } catch {
+              // Preview/web mode — no-op
+            }
+          },
+        }] : []),
+        {
+          icon: 'key' as const,
+          title: 'Redeem Key',
+          color: colors.warning,
+          onPress: () => router.push('/(app)/redeem'),
+        },
+      ],
     },
     {
-      icon: 'podium' as const,
-      title: 'Leaderboard',
-      color: colors.levelAdvanced,
-      onPress: () => router.push('/(app)/leaderboard'),
+      label: 'APP',
+      items: [
+        {
+          icon: 'settings' as const,
+          title: 'Settings',
+          color: colors.textMuted,
+          onPress: () => router.push('/(app)/settings'),
+        },
+      ],
     },
-    {
-      icon: 'card' as const,
-      title: 'Subscription',
-      color: colors.success,
-      onPress: () => router.push('/(app)/subscription'),
-    },
-    {
-      icon: 'settings' as const,
-      title: 'Settings',
-      color: colors.textMuted,
-      onPress: () => router.push('/(app)/settings'),
-    },
+    ...(isAdmin ? [{
+      label: 'ADMIN',
+      items: [{
+        icon: 'shield' as const,
+        title: 'Admin Panel',
+        color: colors.error,
+        onPress: () => router.push('/(app)/admin'),
+      }],
+    }] : []),
   ];
 
   return (
@@ -80,22 +127,27 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <FadeInView delay={0} duration={300}>
           <View style={styles.profileHeader}>
-            {user?.user_metadata?.avatar_url ? (
-              <Image
-                source={{ uri: user.user_metadata.avatar_url }}
-                style={[styles.avatar, { borderColor: colors.primary }]}
-              />
-            ) : (
-              <View style={[styles.avatarFallback, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.avatarLetter, { color: colors.textOnPrimary }]}>
-                  {(
-                    profile?.username ??
-                    user?.user_metadata?.username ??
-                    'U'
-                  )[0].toUpperCase()}
-                </Text>
+            <Pressable onPress={() => router.push('/(app)/edit-profile')} style={{ position: 'relative' }}>
+              {(profile?.avatarUrl || user?.user_metadata?.avatar_url) ? (
+                <Image
+                  source={{ uri: profile?.avatarUrl ?? user?.user_metadata?.avatar_url }}
+                  style={[styles.avatar, { borderColor: colors.primary }]}
+                />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.avatarLetter, { color: colors.textOnPrimary }]}>
+                    {(
+                      profile?.username ??
+                      user?.user_metadata?.username ??
+                      'U'
+                    )[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={[styles.editBadge, { backgroundColor: colors.primary }]}>
+                <Ionicons name="pencil" size={12} color="#FFFFFF" />
               </View>
-            )}
+            </Pressable>
             <View style={{ alignItems: 'center' }}>
               <Text style={[styles.userName, { color: colors.textPrimary }]}>
                 {profile?.username ??
@@ -143,40 +195,42 @@ export default function ProfileScreen() {
 
         {/* Menu Items */}
         <FadeInView delay={200} duration={300}>
-          <View style={{ marginBottom: SPACING.lg }}>
-            <SectionLabel>ACCOUNT</SectionLabel>
-            <View style={{ gap: SPACING.sm }}>
-              {menuItems.map((item) => (
-                <Pressable
-                  key={item.title}
-                  onPress={item.onPress}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.menuIconCircle,
-                      { backgroundColor: item.color + '20' },
+          {menuSections.map((section) => (
+            <View key={section.label} style={{ marginBottom: SPACING.lg }}>
+              <SectionLabel>{section.label}</SectionLabel>
+              <View style={{ gap: SPACING.sm }}>
+                {section.items.map((item) => (
+                  <Pressable
+                    key={item.title}
+                    onPress={item.onPress}
+                    style={({ pressed }) => [
+                      styles.menuItem,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.7 : 1,
+                      },
                     ]}
                   >
-                    <Ionicons name={item.icon} size={22} color={item.color} />
-                  </View>
-                  <Text style={[styles.menuTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                </Pressable>
-              ))}
+                    <View
+                      style={[
+                        styles.menuIconCircle,
+                        { backgroundColor: item.color + '20' },
+                      ]}
+                    >
+                      <Ionicons name={item.icon} size={22} color={item.color} />
+                    </View>
+                    <Text style={[styles.menuTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color={colors.textMuted}
+                    />
+                  </Pressable>
+                ))}
+              </View>
             </View>
-          </View>
+          ))}
 
           {/* Sign Out */}
           <Button
@@ -229,6 +283,18 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansBold,
     lineHeight: FONT_SIZES.display * 1.2,
   },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
   userName: {
     fontSize: FONT_SIZES.lg + 2,
     fontFamily: FONTS.displaySemiBold,
@@ -247,7 +313,7 @@ const styles = StyleSheet.create({
   },
   statsValue: {
     fontSize: FONT_SIZES.lg + 2,
-    fontFamily: FONTS.displaySemiBold,
+    fontFamily: FONTS.sansBold,
     lineHeight: (FONT_SIZES.lg + 2) * 1.2,
   },
   statsLabel: {
